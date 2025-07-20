@@ -1,0 +1,20 @@
+package com.example.hoccode.dto.request;
+
+
+import com.example.hoccode.util.constant.StatusEnum;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class SubmissionUpdateRequest {
+    String id;
+    String message;
+    Integer passedTestCase;
+    Integer totalTestCases;
+    StatusEnum status;
+    Integer maxTime;
+}

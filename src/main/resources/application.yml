@@ -1,21 +1,44 @@
 server:
-  port: 8090
+  port: 8080
 
 spring:
   application:
     name: template
   datasource:
-    url: jdbc:mysql://localhost:3306/db
+    url: jdbc:mysql://localhost:3306/hoccode
     username: root
     password: root
   jpa:
     show-sql: true
     hibernate:
       ddl-auto: update
-#  sql:
-#    init:
-#      mode: always
+  sql:
+    init:
+      mode: always
+  kafka:
+    bootstrap-servers: localhost:9094
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 redis:
   host: localhost
   port: 6379
+
+auth:
+  jwt:
+    accessSignerKey: adE97Xs2F4he7WYk8pQzUBxfRm3TAjo9
+    refreshSignerKey: 4tFg9sKcVhPuA3xMnEjqRZ1YbvLU0dNW
+    valid-duration: 86400
+    refreshable-duration: 2592000
+  verify:
+    register-code-duration: 86400000 # 24 * 60 * 60 * 1000 = 86400000
+    forgot-password-code-duration: 86400000
+
+code-runner-api:
+  host: localhost
+  port: 1337
+
+gpt-api:
+  host: localhost
+  port: 1111

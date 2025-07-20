@@ -1,0 +1,213 @@
+package com.example.hoccode.service.impl;
+
+import com.example.hoccode.advice.exception.BadRequestException;
+import com.example.hoccode.advice.exception.IdInvalidException;
+import com.example.hoccode.dto.mapper.ProblemMapper;
+import com.example.hoccode.dto.projection.CategoryCountProjection;
+import com.example.hoccode.dto.request.ProblemSearchRequest;
+import com.example.hoccode.dto.request.create.CreateProblemRequest;
+import com.example.hoccode.dto.request.update.UpdateProblemRequest;
+import com.example.hoccode.dto.response.CategoryCountResponse;
+import com.example.hoccode.dto.response.ProblemResponse;
+import com.example.hoccode.entity.Hint;
+import com.example.hoccode.entity.Problem;
+import com.example.hoccode.entity.TestCase;
+import com.example.hoccode.repository.*;
+import com.example.hoccode.service.IProblemService;
+import com.example.hoccode.service.redis.IStringStringIntegerRedis;
+import com.example.hoccode.util.SecurityUtil;
+import com.example.hoccode.util.constant.ProblemCategoryEnum;
+import jakarta.persistence.criteria.Join;
+import jakarta.transaction.Transactional;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+public class ProblemService implements IProblemService {
+    ProblemRepository problemRepository;
+    ProblemMapper problemMapper;
+    TestCaseRepository testCaseRepository;
+    HintRepository hintRepository;
+    SecurityUtil securityUtil;
+    IStringStringIntegerRedis redis;
+    SubmissionRepository submissionRepository;
+
+    @Override
+    @Transactional
+    public Problem create(CreateProblemRequest createProblemRequest, boolean isContest) {
+        if(!isContest){
+            if(!securityUtil.isAdmin()){
+                throw new BadRequestException("Only for admin");
+            }
+        }
+
+        Problem problem = Problem.builder()
+                .description(createProblemRequest.getDescription())
+                .constrains(createProblemRequest.getConstrains())
+                .difficulty(createProblemRequest.getDifficulty())
+                .followUp(createProblemRequest.getFollowUp())
+                .memoryLimit(createProblemRequest.getMemoryLimit())
+                .isContestProblem(isContest)
+                .title(createProblemRequest.getTitle())
+                .point(createProblemRequest.getPoint())
+                .timeLimit(createProblemRequest.getTimeLimit())
+                .hints(List.of())
+                .categories(
+                        createProblemRequest.getCategories() != null
+                                ? createProblemRequest.getCategories()
+                                : new ArrayList<>()
+                )
+                .allTestCases(List.of())
+                .build();
+
+        List<Hint> hints = new ArrayList<>();
+        if (createProblemRequest.getHints() != null && !createProblemRequest.getHints().isEmpty()) {
+            hints = createProblemRequest.getHints().stream().map(hint -> Hint.builder().problem(problem).description(hint).build()).collect(Collectors.toList());
+        }
+        problem.setHints(hints);
+
+        List<TestCase> testCases = new ArrayList<>();
+        if(createProblemRequest.getTestCases() != null && !createProblemRequest.getTestCases().isEmpty()){
+            testCases = createProblemRequest.getTestCases().stream().map(
+                    testCase -> TestCase.builder().problem(problem).expectedOutput(testCase.getExpectedOutput()).input(testCase.getInput()).isHidden(testCase.getIsHidden()).build()
+            ).collect(Collectors.toList());
+        }
+        problem.setAllTestCases(testCases);
+
+
+
+        return problemRepository.save(problem);
+    }
+
+
+    @Override
+    public Page<ProblemResponse> getAll(ProblemSearchRequest request) {
+        Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), Sort.by("id").ascending());
+        Specification<Problem> spec = Specification.where(null);
+        if (request.getKeyword() != null && !request.getKeyword().isEmpty()) {
+            spec = spec.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("title")), "%" + request.getKeyword().toLowerCase() + "%")
+            );
+        }
+        if (request.getDifficulty() != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("difficulty"), request.getDifficulty())
+            );
+        }
+        if (request.getCategories() != null && !request.getCategories().isEmpty()) {
+            spec = spec.and((root, query, cb) -> {
+                Join<Problem, ProblemCategoryEnum> categoryJoin = root.join("categories");
+                return categoryJoin.in(request.getCategories());
+            });
+        }
+        spec = spec.and((root, query, cb) ->
+                cb.isFalse(root.get("isContestProblem"))
+        );
+        Optional<String> currentUserEmail = securityUtil.getCurrentUserLogin();
+
+        Set<Integer> acceptedProblemIds = new HashSet<>();
+        if (currentUserEmail.isPresent()) {
+            acceptedProblemIds = submissionRepository.findAcceptedProblemIdsByUser(currentUserEmail.get());
+        }
+        Set<Integer> finalAcceptedIds = acceptedProblemIds;
+        return problemRepository.findAll(spec, pageable)
+                .map(p -> problemMapper.toProblemResponse(p, true, finalAcceptedIds));
+    }
+
+    @Override
+    @Transactional
+    public ProblemResponse update(Integer id, UpdateProblemRequest request) throws IdInvalidException {
+        Problem problem = problemRepository.findById(id)
+                .orElseThrow(() -> new IdInvalidException("Problem not found"));
+
+        if(problem.getIsContestProblem()){
+            if(!problem.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get())){
+                throw new BadRequestException("Can't access this resource");
+            }
+        }else{
+            if(!securityUtil.isAdmin()){
+                throw new BadRequestException("Can't access this resource");
+            }
+        }
+        if (request.getTitle() != null) problem.setTitle(request.getTitle());
+        if (request.getDescription() != null) problem.setDescription(request.getDescription());
+        if (request.getConstrains() != null) problem.setConstrains(request.getConstrains());
+        if (request.getFollowUp() != null) problem.setFollowUp(request.getFollowUp());
+        if (request.getTimeLimit() != null) problem.setTimeLimit(request.getTimeLimit());
+        if (request.getMemoryLimit() != null) problem.setMemoryLimit(request.getMemoryLimit());
+        if (request.getDifficulty() != null) problem.setDifficulty(request.getDifficulty());
+        if (request.getPoint() != null) problem.setPoint(request.getPoint());
+        if (request.getIsContestProblem() != null) problem.setIsContestProblem(request.getIsContestProblem());
+        if (request.getTestCases() != null) {
+            testCaseRepository.deleteAllByProblemId(problem.getId());
+            List<TestCase> newTestCases = request.getTestCases().stream()
+                    .map(dto -> {
+                        TestCase testCase = new TestCase();
+                        testCase.setProblem(problem);
+                        testCase.setInput(dto.getInput());
+                        testCase.setExpectedOutput(dto.getExpectedOutput());
+                        testCase.setIsHidden(dto.getIsHidden() != null ? dto.getIsHidden() : true);
+                        return testCase;
+                    })
+                    .collect(Collectors.toList());
+            problem.setAllTestCases(newTestCases);
+        }
+        if (request.getHints() != null) {
+            hintRepository.deleteAllByProblemId(problem.getId());
+            List<Hint> newHints = request.getHints().stream()
+                    .map(dto -> {
+                        Hint hint = new Hint();
+                        hint.setProblem(problem);
+                        hint.setDescription(dto.getDescription());
+                        return hint;
+                    })
+                    .collect(Collectors.toList());
+            problem.setHints(newHints);
+        }
+        problemRepository.save(problem);
+        return problemMapper.toPublicProblemResponse(problem, true);
+    }
+
+    @Override
+    public ProblemResponse getDailyProblem() {
+        Integer pid = redis.getDailyChallenge();
+        if(pid != null){
+            System.out.println("PID: " + pid);
+            return problemMapper.toPublicProblemResponse(problemRepository.findFirstById(pid), true);
+        }
+        Problem problem = problemRepository.getDailyProblem();
+        redis.setDailyChallenge(problem.getId());
+        return problemMapper.toPublicProblemResponse(problem, true);
+    }
+
+    @Override
+    public List<CategoryCountResponse> getCategoryCounts() {
+            List<CategoryCountProjection> used = problemRepository.countProblemsByCategory();
+
+            Map<ProblemCategoryEnum, Long> countMap = used.stream()
+                    .collect(Collectors.toMap(CategoryCountProjection::getCategory, CategoryCountProjection::getCount));
+
+            return Arrays.stream(ProblemCategoryEnum.values())
+                    .map(category -> new CategoryCountResponse(
+                            category,
+                            countMap.getOrDefault(category, 0L)))
+                    .sorted(Comparator.comparingLong(CategoryCountResponse::count).reversed())
+                    .toList();
+    }
+
+
+}
