@@ -117,15 +117,21 @@ public class ProblemService implements IProblemService {
         spec = spec.and((root, query, cb) ->
                 cb.isFalse(root.get("isContestProblem"))
         );
-        Optional<String> currentUserEmail = securityUtil.getCurrentUserLogin();
+        Set<Integer> finalAcceptedIds = getListAcceptedId();
 
-        Set<Integer> acceptedProblemIds = new HashSet<>();
-        if (currentUserEmail.isPresent()) {
-            acceptedProblemIds = submissionRepository.findAcceptedProblemIdsByUser(currentUserEmail.get());
-        }
-        Set<Integer> finalAcceptedIds = acceptedProblemIds;
-        return problemRepository.findAll(spec, pageable)
-                .map(p -> problemMapper.toProblemResponse(p, true, finalAcceptedIds));
+        Page<Problem> problems = problemRepository.findAll(spec, pageable);
+        List<Integer> problemIds = problems.stream().map(Problem::getId).toList();
+
+        Map<String, Map<Integer, Long>> stats = getProblemStats(problemIds);
+        Map<Integer, Long> passCountMap = stats.get("pass");
+        Map<Integer, Long> failCountMap = stats.get("fail");
+
+        return problems.map(p -> {
+            ProblemResponse response = problemMapper.toProblemResponse(p, true, finalAcceptedIds);
+            response.setPassCount(passCountMap.getOrDefault(p.getId(), 0L));
+            response.setFailCount(failCountMap.getOrDefault(p.getId(), 0L));
+            return response;
+        });
     }
 
     @Override
@@ -185,22 +191,33 @@ public class ProblemService implements IProblemService {
     @Override
     public ProblemResponse getDailyProblem() {
         Integer pid = redis.getDailyChallenge();
+        Problem problem;
         if(pid != null){
-            System.out.println("PID: " + pid);
-            return problemMapper.toPublicProblemResponse(problemRepository.findFirstById(pid), true);
+            problem = problemRepository.findFirstById(pid);
         }
-        Problem problem = problemRepository.getDailyProblem();
-        redis.setDailyChallenge(problem.getId());
-        return problemMapper.toPublicProblemResponse(problem, true);
+        else{
+            problem = problemRepository.getDailyProblem();
+            redis.setDailyChallenge(problem.getId());
+        }
+
+        Set<Integer> finalAcceptedIds = getListAcceptedId();
+
+        List<Integer> problemIds = List.of(problem.getId());
+        Map<String, Map<Integer, Long>> stats = getProblemStats(problemIds);
+        Map<Integer, Long> passCountMap = stats.get("pass");
+        Map<Integer, Long> failCountMap = stats.get("fail");
+
+        ProblemResponse response = problemMapper.toProblemResponse(problem, true, finalAcceptedIds);
+        response.setPassCount(passCountMap.getOrDefault(problem.getId(), 0L));
+        response.setFailCount(failCountMap.getOrDefault(problem.getId(), 0L));
+        return response;
     }
 
     @Override
     public List<CategoryCountResponse> getCategoryCounts() {
             List<CategoryCountProjection> used = problemRepository.countProblemsByCategory();
-
             Map<ProblemCategoryEnum, Long> countMap = used.stream()
                     .collect(Collectors.toMap(CategoryCountProjection::getCategory, CategoryCountProjection::getCount));
-
             return Arrays.stream(ProblemCategoryEnum.values())
                     .map(category -> new CategoryCountResponse(
                             category,
@@ -209,5 +226,28 @@ public class ProblemService implements IProblemService {
                     .toList();
     }
 
+    private Set<Integer> getListAcceptedId(){
+        Optional<String> currentUserEmail = securityUtil.getCurrentUserLogin();
+        Set<Integer> acceptedProblemIds = new HashSet<>();
+        if (currentUserEmail.isPresent()) {
+            acceptedProblemIds = submissionRepository.findAcceptedProblemIdsByUser(currentUserEmail.get());
+        }
+        return acceptedProblemIds;
+    }
 
+    private Map<String, Map<Integer, Long>> getProblemStats(List<Integer> problemIds){
+        Map<Integer, Long> passCountMap = new HashMap<>();
+        Map<Integer, Long> failCountMap = new HashMap<>();
+        for (Object[] row : submissionRepository.countSubmissionByProblemIds(problemIds)) {
+            Integer pid = (Integer) row[0];
+            Long pass = (Long) row[1];
+            Long fail = (Long) row[2];
+            passCountMap.put(pid, pass);
+            failCountMap.put(pid, fail);
+        }
+        return Map.of(
+                "pass", passCountMap,
+                "fail", failCountMap
+        );
+    }
 }

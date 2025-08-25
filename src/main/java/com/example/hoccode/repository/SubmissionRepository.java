@@ -62,5 +62,9 @@ public interface SubmissionRepository extends JpaRepository<Submission, String> 
             @Param("email") String email
     );
 
-
+    @Query("SELECT s.pid, " +
+            "SUM(CASE WHEN s.status = 'ACCEPTED' THEN 1 ELSE 0 END), " +
+            "SUM(CASE WHEN s.status <> 'ACCEPTED' THEN 1 ELSE 0 END) " +
+            "FROM Submission s WHERE s.pid IN :problemIds GROUP BY s.pid")
+    List<Object[]> countSubmissionByProblemIds(@Param("problemIds") List<Integer> problemIds);
 }

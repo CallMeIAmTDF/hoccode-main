@@ -28,6 +28,8 @@ public class ProblemMapper {
                 .memoryLimit(problem.getMemoryLimit())
                 .timeLimit(problem.getTimeLimit())
                 .title(problem.getTitle())
+                .failCount(0L)
+                .passCount(0L)
                 .build();
     }
 

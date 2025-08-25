@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.util.Optional;
 
 @Component
-public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
+public class    CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     private final AuthenticationEntryPoint delegate = new BearerTokenAuthenticationEntryPoint();
 

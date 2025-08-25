@@ -143,14 +143,12 @@ public class SubmissionService implements ISubmissionService {
         Contest contest = contestRepository.findById(contestId)
                 .orElseThrow(() -> new BadRequestException("Contest not found"));
 
-        // Lấy danh sách người dùng có phân trang
         Pageable pageable = PageRequest.of(page, size);
         Page<IContestLeaderboardProjection> leaderboardPage =
                 submissionRepository.findContestLeaderboard(contestId, pageable);
 
         List<ContestLeaderboardEntryDTO> entries = leaderboardPage.getContent().stream()
                 .map(projection -> {
-                    // Với mỗi user, lấy status của tất cả problems trong contest
                     List<ContestProblemStatusResponse> problemStatuses = submissionRepository
                             .findUserContestProblemStatuses(contestId, projection.getUsername())
                             .stream()
@@ -170,8 +168,6 @@ public class SubmissionService implements ISubmissionService {
                 })
                 .collect(Collectors.toList());
 
-        // Nếu không có entries (trang đầu tiên và chưa có ai submit)
-        // thì tạo một entry rỗng với danh sách tất cả problems
         if (page == 0 && entries.isEmpty()) {
             List<ContestProblemStatusResponse> emptyProblemStatuses = submissionRepository
                     .findUserContestProblemStatuses(contestId, "")

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Thông báo Contest</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f6f9fc; margin: 0; padding: 0; color: #333;">
+<div style="max-width: 600px; margin: 30px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #6366f1, #4f46e5); padding: 20px 25px;">
+        <span style="color: #fff; font-size: 22px; font-weight: bold;">HocCode</span>
+    </div>
+
+    <!-- Content -->
+    <div style="padding: 25px;">
+        <p style="font-size: 16px; margin: 0 0 12px;">Xin chào,</p>
+        <p style="margin: 0 0 18px;">Chúng tôi gửi thông báo: chỉ còn khoảng <b style="color:#e11d48;">1 giờ nữa</b> cuộc thi lập trình sẽ bắt đầu!</p>
+
+        <div style="border-left: 4px solid #4f46e5; padding-left: 12px; margin: 18px 0;">
+            <h2 style="margin: 0; font-size: 20px; color: #111827;" th:text="${title}">Tên Contest</h2>
+            <p style="margin: 6px 0 0; font-size: 14px; color: #555;" th:text="${description}">Mô tả ngắn</p>
+        </div>
+
+        <p style="margin: 16px 0 6px; font-size: 14px;"><b>Thời gian bắt đầu:</b>
+            <span th:text="${startTime}">2025-08-18 14:00</span></p>
+        <p style="margin: 0 0 20px; font-size: 14px;"><b>Thời gian kết thúc:</b>
+            <span th:text="${endTime}">2025-08-18 17:00</span></p>
+
+        <div style="text-align: center; margin: 25px 0;">
+            <a th:href="${url}" style="display:inline-block; background:#4f46e5; color:#fff; padding:12px 28px; border-radius:8px; font-size:15px; text-decoration:none; font-weight:600;">
+                Vào trang contest
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="background: #f3f4f6; padding: 14px 25px; text-align: center; font-size: 12px; color: #6b7280;">
+        Bạn nhận được email này vì đã đăng ký tại <b>HocCode.io</b>.
+    </div>
+</div>
+</body>
+</html>

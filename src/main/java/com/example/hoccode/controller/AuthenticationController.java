@@ -40,7 +40,6 @@ public class AuthenticationController {
     @PostMapping("/login")
     ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(@RequestBody AuthenticationRequest request) {
         AuthenticationResponse authenticationResponse = authenticationService.authenticate(request);
-
         logger.debug("fetchCustomerDetails method start");
         ApiResponse<AuthenticationResponse> apiResponse = ApiResponse.<AuthenticationResponse>builder()
                 .code(HttpStatus.OK.value())

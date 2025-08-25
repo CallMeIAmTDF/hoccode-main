@@ -2,6 +2,7 @@ package com.example.hoccode.service.impl;
 
 import com.example.hoccode.advice.AppException;
 import com.example.hoccode.advice.ErrorCode;
+import com.example.hoccode.advice.exception.BadRequestException;
 import com.example.hoccode.dto.request.AuthenticationRequest;
 import com.example.hoccode.dto.request.InvalidatedTokenRequest;
 import com.example.hoccode.dto.response.AuthenticationResponse;
@@ -34,22 +35,26 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     UserRepository userRepository;
     InvalidatedTokenService invalidatedTokenService;
     SecurityUtil securityUtil;
-
     @Override
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
-        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                request.getEmail(), request.getPassword());
-        // authentication user => override loadUserByUsername
-        Authentication authentication = authenticationManagerBuilder.getObject()
-                .authenticate(authenticationToken);
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword());
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        try {
+            Authentication authentication = authenticationManagerBuilder.getObject()
+                    .authenticate(authenticationToken);
 
-        var user = userRepository
-                .findFirstByEmailAndActiveAndIsLocked(request.getEmail(), true, false)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-        System.out.println(user.getName());
-        return createAuthenticationResponse(user);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            var user = userRepository
+                    .findFirstByEmailAndActiveAndIsLocked(request.getEmail(), true, false)
+                    .orElseThrow(() -> new BadRequestException("User not found or inactive or locked"));
+
+            return createAuthenticationResponse(user);
+
+        } catch (Exception e) {
+            throw new BadRequestException("Đăng nhập không thành công");
+        }
     }
 
     /**

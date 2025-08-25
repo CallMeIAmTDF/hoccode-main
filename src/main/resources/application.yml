@@ -1,6 +1,5 @@
 server:
   port: 8080
-
 spring:
   application:
     name: template
@@ -17,6 +16,13 @@ spring:
       mode: always
   kafka:
     bootstrap-servers: localhost:9094
+    consumer:
+      group-id: notification-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -40,5 +46,21 @@ code-runner-api:
   port: 1337
 
 gpt-api:
+  protocol: http
   host: localhost
   port: 1111
+
+mailServer:
+  host: smtp.gmail.com
+  port: 587
+  email: "hello.iamtdf@gmail.com"
+  password: "wzrqmhdbvzzfmfre"
+  protocol: smtp
+  isSSL: false
+
+api:
+  base-url: http://localhost:3000
+  path:
+    verify-register: "/verify/register?code="
+    verify-forgot-password: "/users/password/edit?code="
+    notice-contest: "/contest/"

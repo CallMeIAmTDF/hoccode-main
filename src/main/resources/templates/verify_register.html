@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Xác nhận email - HocCode.io</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f6f9fc; margin: 0; padding: 0; color: #333;">
+<div style="max-width: 600px; margin: 30px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #6366f1, #4f46e5); padding: 20px 25px;">
+        <span style="color: #fff; font-size: 22px; font-weight: bold;">HocCode</span>
+    </div>
+
+    <!-- Content -->
+    <div style="padding: 25px;">
+        <h2 style="font-size: 20px; margin: 0 0 14px;">Xin chào <span th:text="${name}">Người dùng</span>,</h2>
+        <p style="font-size: 15px; line-height: 1.6; margin: 0 0 18px;">
+            Cảm ơn bạn đã đăng ký tại <b>HocCode.io</b>. <br/>
+            Để bắt đầu học lập trình, hãy xác nhận địa chỉ email của bạn.
+        </p>
+
+        <div style="text-align: center; margin: 28px 0;">
+            <a th:href="${url}" target="_blank" rel="noopener"
+               style="display:inline-block; background:#4f46e5; color:#fff; padding:12px 28px; border-radius:8px; text-decoration:none; font-weight:600; font-size:15px;">
+                Xác nhận email
+            </a>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="background: #f3f4f6; padding: 14px 25px; text-align: center; font-size: 12px; color: #6b7280;">
+        Nếu bạn không thực hiện đăng ký, vui lòng bỏ qua email này.<br>
+        © 2025 HocCode.io
+    </div>
+</div>
+</body>
+</html>

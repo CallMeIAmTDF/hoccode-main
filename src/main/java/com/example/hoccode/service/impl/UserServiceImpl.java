@@ -170,7 +170,6 @@ public class UserServiceImpl implements UserService {
                 .role("USER")
                 .isLocked(false)
                 .build();
-
         VerificationCode verificationCode = verifyCodeService.findByEmail(createUserRequest.getEmail());
 
         if (verificationCode != null) {
@@ -194,14 +193,14 @@ public class UserServiceImpl implements UserService {
         NotificationEvent notificationEvent = NotificationEvent.builder()
                 .channel("EMAIL")
                 .recipient(newUser.getEmail())
-                .subject("HocCode.io")
+                .subject("Welcome to HocCode.io!!!")
                 .param(param)
                 .body("Hello, " + newUser.getName())
                 .build();
+        System.out.println("send notificationEvent: ");
 
         // Publish message to kafka
         kafkaTemplate.send("notification-delivery", notificationEvent);
-
         return this.userMapper.toUserResponse(newUser);
     }
 

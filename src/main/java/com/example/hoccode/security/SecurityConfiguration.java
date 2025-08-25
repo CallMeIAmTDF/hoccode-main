@@ -20,6 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -29,15 +30,15 @@ public class SecurityConfiguration {
     private static final String[] PUBLIC_ENDPOINTS = {
             "/auth/login",
             "/auth/**",
+            "/test/**",
             "/users/forgotPassword",
-            "/users/fetchUserById",
-            "/users/fetchUserByIdIn",
             "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui/index.html#/",
             "/submission/handleCallBackApiHeheheheasd",
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {
             "/category/**",
+            "/problem",
             "/problem/leaderboard/**"
     };
 
@@ -60,13 +61,13 @@ public class SecurityConfiguration {
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity,
                                            CustomAuthenticationEntryPoint customAuthenticationEntryPoint) throws Exception {
         httpSecurity
-                .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(request -> request.requestMatchers(PUBLIC_ENDPOINTS)
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINTS).permitAll()
-                        .requestMatchers(HttpMethod.POST, PUBLIC_POST_ENDPOINTS).permitAll()
-//                .requestMatchers("/users/lock/*").hasAuthority(PredefinedRole.ROLE_ADMIN)
-//                .requestMatchers("/users").hasAuthority(PredefinedRole.ROLE_ADMIN)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/file/search", "file/view/**").permitAll()
+                        .requestMatchers("/file/**").hasAuthority(PredefinedRole.ROLE_ADMIN)
+                        .requestMatchers("/admin/**").hasAuthority(PredefinedRole.ROLE_ADMIN)
                         .anyRequest().authenticated());
 
         httpSecurity.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwtConfigurer -> jwtConfigurer
@@ -74,7 +75,6 @@ public class SecurityConfiguration {
                         .jwtAuthenticationConverter(jwtAuthenticationConverter()))
                 .authenticationEntryPoint(customAuthenticationEntryPoint));
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
-
         return httpSecurity.build();
     }
 
@@ -82,28 +82,27 @@ public class SecurityConfiguration {
     JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
         jwtGrantedAuthoritiesConverter.setAuthorityPrefix("");
-
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
-
         return jwtAuthenticationConverter;
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-
-        config.setAllowedOrigins(List.of(
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
-                "https://your-frontend.com"
+                "https://lawbot.iamtdf.id.vn",
+                "https://another-domain.com"
         ));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
-
+        configuration.addAllowedMethod("*");
+        configuration.addAllowedHeader("*");
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
+
 }

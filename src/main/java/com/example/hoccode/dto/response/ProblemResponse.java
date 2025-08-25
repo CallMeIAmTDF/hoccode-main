@@ -28,4 +28,7 @@ public class ProblemResponse {
     private Boolean accepted;
     private List<Hint> hints;
     private List<TestCase> allTestCases;
+
+    Long passCount;
+    Long failCount;
 }

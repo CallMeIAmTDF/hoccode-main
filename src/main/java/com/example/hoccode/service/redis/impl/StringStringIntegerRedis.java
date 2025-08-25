@@ -24,4 +24,5 @@ public class StringStringIntegerRedis extends BaseRedisServiceImplV2<String, Str
         System.out.println("KEY : daily:" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE));
         this.hashSet("daily", LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE), i);
     }
+
 }

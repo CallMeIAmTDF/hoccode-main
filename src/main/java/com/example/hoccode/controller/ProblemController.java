@@ -41,16 +41,6 @@ public class ProblemController {
                 .body(apiResponse);
     }
 
-//    @PostMapping("/contest")
-//    public ResponseEntity<ApiResponse<Problem>> createContest(@RequestBody CreateProblemRequest createProblemRequest){
-//        ApiResponse<Problem> apiResponse = ApiResponse.<Problem>builder()
-//                .code(HttpStatus.OK.value())
-//                .message("Create Problem")
-//                .data(problemService.create(createProblemRequest, true))
-//                .build();
-//        return ResponseEntity.ok()
-//                .body(apiResponse);
-//    }
 
     @GetMapping("")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getAll(ProblemSearchRequest request){

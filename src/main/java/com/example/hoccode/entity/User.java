@@ -9,6 +9,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -39,15 +40,18 @@ public class User extends BaseEntity{
     @JsonManagedReference
     Streak streak;
 
-//    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-//    @JsonManagedReference
-//    private List<Submission> submissions;
-
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     @JsonManagedReference
     private List<ContestParticipant> contestParticipants;
 
     public void incrementPoint(int point){
         this.point += point;
+    }
+
+    @PrePersist
+    public void generateId() {
+        if (id == null) {
+            id = UUID.randomUUID().toString();
+        }
     }
 }

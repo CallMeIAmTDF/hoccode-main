@@ -81,6 +81,7 @@ public class ContestController {
                 .body(apiResponse);
     }
 
+
     @PostMapping("/{id}/join")
     public ResponseEntity<ApiResponse<Void>> joinContest(
             @PathVariable Integer id,
@@ -107,4 +108,6 @@ public class ContestController {
         return ResponseEntity.ok()
                 .body(apiResponse);
     }
+
+
 }
