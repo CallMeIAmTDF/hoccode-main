@@ -2,7 +2,6 @@ package com.example.hoccode.util;
 
 import com.example.hoccode.advice.AppException;
 import com.example.hoccode.advice.ErrorCode;
-import com.example.hoccode.advice.exception.BadRequestException;
 import com.example.hoccode.entity.User;
 import com.example.hoccode.service.InvalidatedTokenService;
 import com.nimbusds.jose.*;
@@ -65,7 +64,7 @@ public class SecurityUtil {
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
                 .claim("uid", user.getId())
                 .subject(user.getEmail())
-                .issuer("tuananhne.com")
+                .issuer("iamtdf.id.vn")
                 .issueTime(new Date())
                 .expirationTime(new Date(
                         Instant.now().plus(

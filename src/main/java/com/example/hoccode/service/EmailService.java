@@ -8,4 +8,8 @@ public interface EmailService {
     void sendEmailForgotPassword(NotificationEvent message);
 
     void sendEmailContest(NotificationEvent message);
+
+    void sendEmailHappyBirthday(NotificationEvent message);
+
+    void sendEmailStreaks(NotificationEvent message);
 }

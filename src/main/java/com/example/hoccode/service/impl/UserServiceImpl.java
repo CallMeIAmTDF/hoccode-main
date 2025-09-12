@@ -2,6 +2,7 @@ package com.example.hoccode.service.impl;
 
 import com.example.hoccode.advice.AppException;
 import com.example.hoccode.advice.ErrorCode;
+import com.example.hoccode.advice.exception.BadRequestException;
 import com.example.hoccode.advice.exception.DuplicateRecordException;
 import com.example.hoccode.advice.exception.ResourceNotFoundException;
 import com.example.hoccode.dto.mapper.UserMapper;
@@ -14,7 +15,9 @@ import com.example.hoccode.dto.response.UserResponse;
 import com.example.hoccode.entity.User;
 import com.example.hoccode.entity.VerificationCode;
 import com.example.hoccode.event.NotificationEvent;
+import com.example.hoccode.repository.SubmissionRepository;
 import com.example.hoccode.repository.UserRepository;
+import com.example.hoccode.service.IStreakService;
 import com.example.hoccode.service.UserService;
 import com.example.hoccode.service.VerifyCodeService;
 import com.example.hoccode.util.SecurityUtil;
@@ -52,6 +55,8 @@ public class UserServiceImpl implements UserService {
     UserMapper userMapper;
     SecurityUtil securityUtil;
     KafkaTemplate<String, Object> kafkaTemplate;
+    IStreakService streakService;
+    SubmissionRepository submissionRepository;
 
     /**
      * @param email - Input email
@@ -287,5 +292,18 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<UserPointResponse> getLeaderBoard() {
         return userRepository.findTop15ByActiveTrueAndRoleOrderByPointDesc("USER").stream().map(userMapper::toUserPointResponse).toList();
+    }
+
+    @Override
+    public Map<String, Object> getUserStats(){
+        Map<String, Object> userStats = new HashMap<>();
+        User currentUser = userRepository.findByEmail(securityUtil.getCurrentUserLogin().orElse(null)).orElseThrow(() -> new BadRequestException("Login"));
+        userStats.put("rank", userRepository.getUserRankByEmail(securityUtil.getCurrentUserLogin().orElse(null)));
+        userStats.put("info", userMapper.toUserResponse(currentUser));
+        userStats.put("joined", currentUser.getCreatedAt());
+        userStats.put("streak", streakService.getStreak(currentUser.getEmail()));
+        userStats.put("solved", submissionRepository.countAcceptedProblems(currentUser.getEmail()));
+        userStats.put("point", currentUser.getPoint());
+        return userStats;
     }
 }

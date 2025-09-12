@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ContestRepository extends JpaRepository<Contest, Integer> {
@@ -14,6 +15,7 @@ public interface ContestRepository extends JpaRepository<Contest, Integer> {
 
     @Query("""
     SELECT c FROM Contest c
+    WHERE c.deleted = false
     ORDER BY
       CASE
         WHEN c.startTime <= CURRENT_TIMESTAMP AND c.endTime >= CURRENT_TIMESTAMP THEN 0
@@ -25,5 +27,9 @@ public interface ContestRepository extends JpaRepository<Contest, Integer> {
 """)
     List<Contest> findAllSortedByTimePriority();
 
-    List<Contest> findByStartTimeBetween(LocalDateTime start, LocalDateTime end);
+    List<Contest> findByStartTimeBetweenAndDeletedFalse(LocalDateTime start, LocalDateTime end);
+
+    Optional<Contest> findFirstByIdAndDeletedFalse(Integer id);
+
+    List<Contest> findByCreatedByOrderByCreatedAtDesc(String createdBy);
 }

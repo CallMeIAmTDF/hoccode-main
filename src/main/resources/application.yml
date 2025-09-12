@@ -1,8 +1,13 @@
 server:
   port: 8080
+
 spring:
   application:
     name: template
+#  task:
+#    scheduling:
+#      zo
+#      time-zone: =Asia/Ho_Chi_Minh
   datasource:
     url: jdbc:mysql://localhost:3306/hoccode
     username: root
@@ -26,7 +31,11 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
 redis:
   host: localhost
   port: 6379
@@ -42,6 +51,7 @@ auth:
     forgot-password-code-duration: 86400000
 
 code-runner-api:
+  protocol: http
   host: localhost
   port: 1337
 
@@ -61,6 +71,8 @@ mailServer:
 api:
   base-url: http://localhost:3000
   path:
-    verify-register: "/verify/register?code="
-    verify-forgot-password: "/users/password/edit?code="
+    verify-register: "/auth/verify?code="
+    verify-forgot-password: "/auth/forgot?code="
     notice-contest: "/contest/"
+    noti-streak: "/learn"
+

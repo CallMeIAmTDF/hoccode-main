@@ -33,6 +33,7 @@ public class User extends BaseEntity{
     String avatar;
 
     @Column(name = "point")
+    @Builder.Default
     private Integer point = 0;
 
 

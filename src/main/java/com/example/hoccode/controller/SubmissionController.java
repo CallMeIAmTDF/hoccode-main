@@ -5,6 +5,7 @@ import com.example.hoccode.advice.exception.BadRequestException;
 import com.example.hoccode.dto.ApiResponse;
 import com.example.hoccode.dto.request.SubmissionUpdateRequest;
 import com.example.hoccode.dto.request.create.CreateSubmissionRequest;
+import com.example.hoccode.dto.response.call.CodeRunnerResponse;
 import com.example.hoccode.entity.Submission;
 import com.example.hoccode.service.ISubmissionService;
 import com.example.hoccode.util.CustomHeaders;
@@ -48,9 +49,9 @@ public class SubmissionController {
 
     @PostMapping("/handleCallBackApiHeheheheasd")
     public void handleCallBackApi(@RequestBody SubmissionUpdateRequest request,
-        @RequestHeader(value = CustomHeaders.X_CODE_RUNNER_API) String header
+        @RequestHeader(value = CustomHeaders.X_CODE_RUNNER_API, required = false) String header
     ){
-        if(!header.isEmpty()){
+        if(header == null || header.isEmpty()){
             throw new BadRequestException("Don't use API");
         }
         submissionService.handleCallBack(request);
@@ -63,6 +64,18 @@ public class SubmissionController {
                 .code(HttpStatus.OK.value())
                 .message("Get My Submission")
                 .data(submissionService.getMySubmission())
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
+
+    @PostMapping("/run")
+    public ResponseEntity<ApiResponse<CodeRunnerResponse>> run(@RequestBody CreateSubmissionRequest request){
+        ApiResponse<CodeRunnerResponse> apiResponse = ApiResponse.<CodeRunnerResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Submit")
+                .data(submissionService.run(request, true))
                 .build();
         return ResponseEntity.ok()
                 .body(apiResponse);

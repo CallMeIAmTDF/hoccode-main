@@ -51,12 +51,15 @@ public class Problem extends BaseEntity{
 
     Integer point;
 
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Builder.Default
+    Boolean deleted = false;
+
     @ElementCollection(targetClass = ProblemCategoryEnum.class, fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
     @CollectionTable(name = "problem_categories", joinColumns = @JoinColumn(name = "problem_id"))
     @Column(name = "category")
     private List<ProblemCategoryEnum> categories;
-
 
     @OneToMany(mappedBy = "problem", cascade = CascadeType.ALL)
     @JsonManagedReference

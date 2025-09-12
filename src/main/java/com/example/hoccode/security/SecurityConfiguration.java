@@ -4,9 +4,6 @@ import com.example.hoccode.util.constant.PredefinedRole;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -21,7 +18,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -38,12 +34,13 @@ public class SecurityConfiguration {
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {
             "/category/**",
+            "/auth/verify",
             "/problem",
             "/problem/leaderboard/**"
     };
 
     private static final String[] PUBLIC_POST_ENDPOINTS = {
-
+        "/submission/handleCallBackApiHeheheheasd"
     };
 
     private final CustomJwtDecoder customJwtDecoder;
@@ -66,9 +63,11 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINTS).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/file/search", "file/view/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/file/**").hasAuthority(PredefinedRole.ROLE_ADMIN)
                         .requestMatchers("/admin/**").hasAuthority(PredefinedRole.ROLE_ADMIN)
                         .anyRequest().authenticated());
+
 
         httpSecurity.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwtConfigurer -> jwtConfigurer
                         .decoder(customJwtDecoder)

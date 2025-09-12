@@ -13,9 +13,9 @@ import java.util.Random;
 
 @Repository
 public interface ProblemRepository extends JpaRepository<Problem, Integer>, JpaSpecificationExecutor<Problem> {
-    Problem findFirstById(Integer id);
+    Problem findFirstByIdAndDeletedFalse(Integer id);
 
-    Optional<Problem> findById(Integer id);
+    Optional<Problem> findByIdAndDeletedFalse(Integer id);
 
     /*
     @Query( """ SELECT p FROM Problem p LEFT JOIN Submission s ON s.pid = p.id AND s.status = 'ACCEPTED' GROUP BY p.id ORDER BY COUNT(s.id) ASC LIMIT 1 """ )
@@ -24,7 +24,9 @@ public interface ProblemRepository extends JpaRepository<Problem, Integer>, JpaS
     @Query(
             value = """
         SELECT p.* FROM problems p
+        
         LEFT JOIN submissions s ON s.pid = p.id AND s.status = 'ACCEPTED'
+        WHERE p.is_contest_problem = false
         GROUP BY p.id
         ORDER BY COUNT(s.id) ASC
         LIMIT 100
@@ -39,8 +41,30 @@ public interface ProblemRepository extends JpaRepository<Problem, Integer>, JpaS
         return candidates.get(new Random().nextInt(candidates.size()));
     }
 
-    @Query("SELECT c AS category, COUNT(p) AS count " +
-            "FROM Problem p JOIN p.categories c " +
-            "GROUP BY c ORDER BY COUNT(p) DESC")
+    @Query("""
+    SELECT c AS category, COUNT(p) AS count
+    FROM Problem p JOIN p.categories c
+    WHERE p.isContestProblem = false
+    GROUP BY c
+    ORDER BY COUNT(p) DESC
+""")
     List<CategoryCountProjection> countProblemsByCategory();
+
+
+    @Query(value = """
+    SELECT * FROM problems 
+    WHERE difficulty = 'EASY' 
+      AND is_contest_problem = false
+    ORDER BY RAND() 
+    LIMIT 1
+""", nativeQuery = true)
+    Problem findRandomProblem();
+
+    @Query("""
+    SELECT p.difficulty AS diff, COUNT(p) AS total
+    FROM Problem p
+    WHERE p.isContestProblem = false
+    GROUP BY p.difficulty
+""")
+    List<Object[]> countTotalByDifficulty();
 }

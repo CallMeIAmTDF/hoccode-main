@@ -3,6 +3,8 @@ package com.example.hoccode.repository;
 import com.example.hoccode.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -23,4 +25,17 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
     List<User> findByIdIn(List<String> ids);
 
     List<User> findTop15ByActiveTrueAndRoleOrderByPointDesc(String role);
+
+
+    @Query(value = """
+        SELECT COUNT(*) + 1 
+        FROM users u
+        WHERE u.point > (SELECT point FROM users WHERE email = :email)
+        """, nativeQuery = true)
+    Integer getUserRankByEmail(@Param("email") String email);
+
+    @Query("SELECT u FROM User u " +
+            "WHERE MONTH(u.dob) = :month " +
+            "AND DAY(u.dob) = :day")
+    List<User> findUsersByBirthday(@Param("day") int day, @Param("month") int month);
 }

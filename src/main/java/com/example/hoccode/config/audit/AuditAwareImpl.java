@@ -1,4 +1,4 @@
-package com.example.hoccode.config;
+package com.example.hoccode.config.audit;
 
 import com.example.hoccode.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +14,6 @@ public class AuditAwareImpl implements AuditorAware<String> {
 
     @Override
     public Optional<String> getCurrentAuditor() {
-        return Optional.of(securityUtil.getCurrentUserLogin().get());
+        return Optional.of(securityUtil.getCurrentUserLogin().orElse("system"));
     }
 }

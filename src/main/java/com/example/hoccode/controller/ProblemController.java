@@ -77,4 +77,15 @@ public class ProblemController {
         return ResponseEntity.ok()
                 .body(apiResponse);
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<ProblemResponse>> getProblem(@PathVariable(required = true) Integer id){
+        ApiResponse<ProblemResponse> apiResponse = ApiResponse.<ProblemResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Get Problem")
+                .data(problemService.problemDetail(id))
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
 }

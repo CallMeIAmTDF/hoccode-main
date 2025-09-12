@@ -1,20 +1,25 @@
 package com.example.hoccode.dto.mapper;
 
+import com.example.hoccode.dto.request.create.CreateProblemRequest;
+import com.example.hoccode.dto.request.update.UpdateContestProblemRequest;
+import com.example.hoccode.dto.request.update.UpdateHintRequest;
+import com.example.hoccode.dto.request.update.UpdateProblemRequest;
+import com.example.hoccode.dto.request.update.UpdateTestcaseRequest;
 import com.example.hoccode.dto.response.ProblemResponse;
 import com.example.hoccode.entity.Problem;
-import com.example.hoccode.repository.ProblemRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ProblemMapper {
-    public ProblemResponse toPublicProblemResponse(Problem problem, boolean isPublic){
+    public ProblemResponse toPublicProblemResponse(Problem problem, boolean isPublic) {
         return ProblemResponse.builder()
                 .id(problem.getId())
                 .hints(problem.getHints())
@@ -33,7 +38,7 @@ public class ProblemMapper {
                 .build();
     }
 
-    public ProblemResponse toProblemResponse(Problem problem, boolean isPublic, Set<Integer> acceptedProblemIds){
+    public ProblemResponse toProblemResponse(Problem problem, boolean isPublic, Set<Integer> acceptedProblemIds) {
         ProblemResponse.ProblemResponseBuilder builder = ProblemResponse.builder()
                 .id(problem.getId())
                 .hints(problem.getHints())
@@ -51,5 +56,51 @@ public class ProblemMapper {
             builder.accepted(acceptedProblemIds.contains(problem.getId()));
         }
         return builder.build();
+    }
+
+    public CreateProblemRequest toCreateProblemRequest(UpdateContestProblemRequest request) {
+        return CreateProblemRequest.builder()
+                .title(request.getTitle())
+                .description(request.getDescription())
+                .timeLimit(request.getTimeLimit())
+                .memoryLimit(request.getMemoryLimit())
+                .hints(request.getHints())
+                .constrains(request.getConstrains())
+                .difficulty(request.getDifficulty())
+                .followUp(request.getFollowUp())
+                .categories(request.getCategories())
+                .testCases(request.getTestCases())
+                .point(request.getPoint())
+                .build();
+    }
+
+    public UpdateProblemRequest toUpdateProblemRequest(UpdateContestProblemRequest request, boolean isContestProblem) {
+        return UpdateProblemRequest.builder()
+                .title(request.getTitle())
+                .description(request.getDescription())
+                .timeLimit(request.getTimeLimit())
+                .memoryLimit(request.getMemoryLimit())
+                .isContestProblem(isContestProblem)
+                .hints(!request.getHints().isEmpty()
+                        ? request.getHints().stream()
+                        .map(h -> UpdateHintRequest.builder()
+                                .description(h)
+                                .build())
+                        .toList()
+                        : List.of())
+                .constrains(request.getConstrains())
+                .difficulty(request.getDifficulty())
+                .followUp(request.getFollowUp())
+                .testCases(request.getTestCases().isEmpty()
+                        ? List.of()
+                        : request.getTestCases().stream()
+                            .map(t -> UpdateTestcaseRequest.builder()
+                                                                .input(t.getInput())
+                                                                .expectedOutput(t.getExpectedOutput())
+                                                                .isHidden(t.getIsHidden())
+                                                                .build()).toList()
+                )
+                .point(request.getPoint())
+                .build();
     }
 }

@@ -2,6 +2,7 @@ package com.example.hoccode.repository;
 
 import com.example.hoccode.dto.projection.IContestLeaderboardProjection;
 import com.example.hoccode.dto.projection.IContestProblemStatusProjection;
+import com.example.hoccode.dto.response.SubmissionCategoryCount;
 import com.example.hoccode.entity.Submission;
 import com.example.hoccode.util.constant.StatusEnum;
 import org.springframework.data.domain.Page;
@@ -9,6 +10,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;
+
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.List;
 
@@ -21,26 +24,69 @@ public interface SubmissionRepository extends JpaRepository<Submission, String> 
 
     Boolean existsByCreatedByAndPidAndStatus(String email, Integer pid, StatusEnum statusEnum);
 
-    @Query("""
-        SELECT DISTINCT s.createdBy as username,
-            SUM(CASE WHEN s.status = 'ACCEPTED' AND
-                NOT EXISTS (
-                    SELECT 1 FROM Submission s2
-                    WHERE s2.createdBy = s.createdBy
-                    AND s2.pid = s.pid
-                    AND s2.status = 'ACCEPTED'
-                    AND s2.createdAt < s.createdAt
-                ) THEN p.point ELSE 0 END) as totalPoints
-        FROM Submission s
-        JOIN Problem p ON s.pid = p.id
-        JOIN ContestProblem cp ON p.id = cp.problem.id
-        WHERE cp.contest.id = :contestId
-        GROUP BY s.createdBy
-        ORDER BY totalPoints DESC
-        """)
+    @Query(value = """
+    SELECT s1.created_by as username,
+           SUM(p.point) as totalPoints
+    FROM submissions s1
+    JOIN problems p ON s1.pid = p.id
+    JOIN contest_problems cp ON p.id = cp.problem_id AND cp.contest_id = :contestId
+    WHERE s1.status = 'ACCEPTED'
+      AND NOT EXISTS (
+          SELECT 1
+          FROM submissions s2
+          JOIN contest_problems cp2 ON s2.pid = cp2.problem_id AND cp2.contest_id = :contestId
+          WHERE s2.created_by = s1.created_by
+            AND s2.pid = s1.pid
+            AND s2.status = 'ACCEPTED'
+            AND s2.created_at < s1.created_at
+      )
+    GROUP BY s1.created_by
+    ORDER BY totalPoints DESC
+    """,
+            countQuery = """
+    SELECT COUNT(DISTINCT s1.created_by)
+    FROM submissions s1
+    JOIN problems p ON s1.pid = p.id
+    JOIN contest_problems cp ON p.id = cp.problem_id AND cp.contest_id = :contestId
+    WHERE s1.status = 'ACCEPTED'
+      AND NOT EXISTS (
+          SELECT 1
+          FROM submissions s2
+          JOIN contest_problems cp2 ON s2.pid = cp2.problem_id AND cp2.contest_id = :contestId
+          WHERE s2.created_by = s1.created_by
+            AND s2.pid = s1.pid
+            AND s2.status = 'ACCEPTED'
+            AND s2.created_at < s1.created_at
+      )
+    """,
+            nativeQuery = true)
     Page<IContestLeaderboardProjection> findContestLeaderboard(
             @Param("contestId") Integer contestId,
             Pageable pageable
+    );
+
+    @Query(value = """
+    SELECT s1.created_by as username,
+           SUM(p.point) as totalPoints
+    FROM submissions s1
+    JOIN problems p ON s1.pid = p.id
+    JOIN contest_problems cp ON p.id = cp.problem_id AND cp.contest_id = :contestId
+    WHERE s1.status = 'ACCEPTED'
+      AND NOT EXISTS (
+          SELECT 1
+          FROM submissions s2
+          JOIN contest_problems cp2 ON s2.pid = cp2.problem_id AND cp2.contest_id = :contestId
+          WHERE s2.created_by = s1.created_by
+            AND s2.pid = s1.pid
+            AND s2.status = 'ACCEPTED'
+            AND s2.created_at < s1.created_at
+      )
+    GROUP BY s1.created_by
+    ORDER BY totalPoints DESC
+    """,
+            nativeQuery = true)
+    List<IContestLeaderboardProjection> findContestLeaderboardNoPage(
+            @Param("contestId") Integer contestId
     );
 
     @Query("""
@@ -67,4 +113,75 @@ public interface SubmissionRepository extends JpaRepository<Submission, String> 
             "SUM(CASE WHEN s.status <> 'ACCEPTED' THEN 1 ELSE 0 END) " +
             "FROM Submission s WHERE s.pid IN :problemIds GROUP BY s.pid")
     List<Object[]> countSubmissionByProblemIds(@Param("problemIds") List<Integer> problemIds);
+
+
+    @Query(value = """
+        SELECT DATE(s.created_at) as day, COUNT(*) as total
+        FROM submissions s
+        JOIN problems p ON s.pid = p.id
+        WHERE s.created_by = :email
+          AND s.created_at >= :startDate
+          AND s.created_at <= :endDate
+          AND p.is_contest_problem = false
+        GROUP BY DATE(s.created_at)
+""", nativeQuery = true)
+    List<Object[]> countAcceptedByDay(
+            @Param("email") String email,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query("""
+        SELECT new com.example.hoccode.dto.response.SubmissionCategoryCount(CAST(c AS string), COUNT(DISTINCT p.id))
+        FROM Submission s
+        JOIN Problem p ON s.pid = p.id
+        JOIN p.categories c
+        WHERE s.createdBy = :email
+          AND s.status = com.example.hoccode.util.constant.StatusEnum.ACCEPTED
+          AND p.isContestProblem = false
+        GROUP BY c
+    """)
+    List<SubmissionCategoryCount> countAcceptedByCategory(@Param("email") String email);
+
+    @Query("""
+    SELECT COUNT(DISTINCT s.pid)
+    FROM Submission s
+    JOIN Problem p ON s.pid = p.id
+    WHERE s.createdBy = :email
+      AND s.status = com.example.hoccode.util.constant.StatusEnum.ACCEPTED
+      AND p.isContestProblem = false
+""")
+    long countAcceptedProblems(@Param("email") String email);
+
+    @Query("""
+    SELECT p.difficulty AS diff, COUNT(DISTINCT s.pid) AS solved
+    FROM Submission s
+    JOIN Problem p ON s.pid = p.id
+    WHERE s.status = com.example.hoccode.util.constant.StatusEnum.ACCEPTED
+      AND s.createdBy = :email
+      AND p.isContestProblem = false
+    GROUP BY p.difficulty
+""")
+    List<Object[]> countSolvedByDifficulty(@Param("email") String email);
+
+
+    @Query(value = """
+        WITH RECURSIVE days AS (
+            SELECT CURDATE() - INTERVAL 9 DAY AS d
+            UNION ALL
+            SELECT d + INTERVAL 1 DAY FROM days WHERE d < CURDATE()
+        )
+        SELECT d AS day, COUNT(s.id) AS submissions
+        FROM days
+        LEFT JOIN submissions s
+          ON DATE(s.created_at) = d
+          AND s.created_by = :email
+          AND NOT EXISTS (
+              SELECT 1 FROM problems p
+              WHERE p.id = s.pid AND p.is_contest_problem = true
+          )
+        GROUP BY d
+        ORDER BY d
+    """, nativeQuery = true)
+    List<Object[]> countSubmissionLast10Days(@Param("email") String email);
 }

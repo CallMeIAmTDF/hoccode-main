@@ -42,7 +42,7 @@ public class ContestScheduler {
 
         // ====== REMINDER 1 HOUR BEFORE ======
         LocalDateTime oneHourLater = now.plusHours(1);
-        List<Contest> upcoming = contestRepository.findByStartTimeBetween(now, oneHourLater);
+        List<Contest> upcoming = contestRepository.findByStartTimeBetweenAndDeletedFalse(now, oneHourLater);
         for (Contest contest : upcoming) {
             String redisKey = "contest:reminder:" + contest.getId();
             if (Boolean.TRUE.equals(redisTemplate.opsForValue().get(redisKey))) continue;
@@ -69,7 +69,7 @@ public class ContestScheduler {
         }
 
         // ====== STARTING NOW ======
-        List<Contest> startingNow = contestRepository.findByStartTimeBetween(
+        List<Contest> startingNow = contestRepository.findByStartTimeBetweenAndDeletedFalse(
                 now.minusSeconds(30),
                 now.plusSeconds(30)
         );

@@ -1,8 +1,14 @@
 package com.example.hoccode.service.impl;
 
 import com.example.hoccode.advice.exception.BadRequestException;
+import com.example.hoccode.advice.exception.IdInvalidException;
 import com.example.hoccode.dto.mapper.ContestMapper;
+import com.example.hoccode.dto.mapper.ProblemMapper;
 import com.example.hoccode.dto.request.create.CreateContestRequest;
+import com.example.hoccode.dto.request.update.UpdateContestProblemRequest;
+import com.example.hoccode.dto.request.update.UpdateContestRequest;
+import com.example.hoccode.dto.response.MyContestResponse;
+import com.example.hoccode.dto.response.ProblemResponse;
 import com.example.hoccode.dto.response.contest.ContestDetailResponse;
 import com.example.hoccode.dto.response.contest.ContestResponse;
 import com.example.hoccode.entity.*;
@@ -12,6 +18,7 @@ import com.example.hoccode.repository.UserRepository;
 import com.example.hoccode.service.IContestService;
 import com.example.hoccode.service.IProblemService;
 import com.example.hoccode.util.SecurityUtil;
+import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -20,8 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -35,6 +41,8 @@ public class ContestService implements IContestService {
     SecurityUtil securityUtil;
     ContestParticipantRepository contestParticipantRepository;
     UserRepository userRepository;
+    ProblemMapper problemMapper;
+
     @Override
     public Contest create(CreateContestRequest request) {
         Contest contest = Contest.builder()
@@ -61,45 +69,118 @@ public class ContestService implements IContestService {
     }
 
     @Override
-    public Contest updateContest(Integer contestId, CreateContestRequest request) {
-        Contest contest = contestRepository.findById(contestId)
+    public Contest updateContest(Integer contestId, UpdateContestRequest request) throws IdInvalidException {
+        Contest contest = contestRepository.findFirstByIdAndDeletedFalse(contestId)
                 .orElseThrow(() -> new BadRequestException("Contest not found with id: " + contestId));
 
         if(!contest.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get()))
             throw new BadRequestException("Access Denied");
 
-        contest.setTitle(request.getTitle());
-        contest.setDescription(request.getDescription());
-        contest.setPassword(StringUtils.hasText(request.getPassword()) ? request.getPassword() : null);
-        contest.setStartTime(request.getStartTime());
-        contest.setEndTime(request.getEndTime());
-        contest.setNumAttendees(
-                Optional.ofNullable(request.getNumAttendees())
-                        .filter(n -> n > 0)
-                        .orElse(999999)
-        );
-        contest.getContestProblems().clear();
-        List<ContestProblem> newContestProblems = request.getProblems().stream()
-                .map(problemRequest -> {
-                    Problem createdProblem = problemService.create(problemRequest, true);
-                    return ContestProblem.builder()
+        if(request.getNumAttendees() != null && contest.getParticipants().size() > request.getNumAttendees()){
+            throw new BadRequestException("Cannot decrease number of attendees");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        boolean contestStarted = contest.getStartTime() != null && now.isAfter(contest.getStartTime());
+
+        // --- Update metadata ---
+        if(!contestStarted){
+            contest.setTitle(request.getTitle());
+            contest.setDescription(request.getDescription());
+            contest.setPassword(StringUtils.hasText(request.getPassword()) ? request.getPassword() : null);
+            contest.setStartTime(request.getStartTime());
+            contest.setEndTime(request.getEndTime());
+            contest.setNumAttendees(
+                    Optional.ofNullable(request.getNumAttendees())
+                            .filter(n -> n > 0)
+                            .orElse(999999)
+            );
+        }
+
+        // --- Update problems ---
+        Map<Integer, ContestProblem> existingMap = contest.getContestProblems().stream()
+                .collect(Collectors.toMap(cp -> cp.getProblem().getId(), cp -> cp));
+
+        List<ContestProblem> updatedProblems = new ArrayList<>();
+
+        if (request.getProblems() != null) {
+            for (UpdateContestProblemRequest problemReq : request.getProblems()) {
+                if (problemReq.getPid() != null && existingMap.containsKey(problemReq.getPid())) {
+                    ContestProblem existingCp = existingMap.get(problemReq.getPid());
+                    if(existingCp != null){
+                        Problem problem = existingMap.get(problemReq.getPid()).getProblem();
+
+                            problemService.update(problem.getId(),
+                                    problemMapper.toUpdateProblemRequest(problemReq, true));
+                        updatedProblems.add(existingMap.get(problemReq.getPid()));
+                    }
+                } else {
+                    if (contestStarted) {
+                        throw new BadRequestException("Cannot add new problem after contest started");
+                    }
+                    Problem newProblem = problemService.create(
+                            problemMapper.toCreateProblemRequest(problemReq), true);
+                    ContestProblem newCp = ContestProblem.builder()
                             .contest(contest)
-                            .problem(createdProblem)
+                            .problem(newProblem)
                             .build();
-                })
-                .toList();
-        contest.setContestProblems(newContestProblems);
+                    updatedProblems.add(newCp);
+                }
+            }
+            contest.setContestProblems(updatedProblems);
+        }
         return contestRepository.save(contest);
     }
 
+//    @Override
+//    public ContestDetailResponse getContestDetail(Integer contestId){
+//        Contest contest = contestRepository.findFirstByIdAndDeletedFalse(contestId)
+//                .orElseThrow(() -> new BadRequestException("Contest not found with id: " + contestId));
+//        if(LocalDateTime.now().isBefore(contest.getStartTime())){
+//            contest.setContestProblems(List.of());
+//        }
+//        return contestMapper.toContestDetailResponse(contest, false);
+//    }
+
     @Override
-    public ContestDetailResponse getContestDetail(Integer contestId){
-        Contest contest = contestRepository.findById(contestId)
+    public ContestDetailResponse getContestDetail(Integer contestId) {
+        Contest contest = contestRepository.findFirstByIdAndDeletedFalse(contestId)
                 .orElseThrow(() -> new BadRequestException("Contest not found with id: " + contestId));
-        if(LocalDateTime.now().isBefore(contest.getStartTime())){
+
+        if (LocalDateTime.now().isBefore(contest.getStartTime())) {
             contest.setContestProblems(List.of());
         }
-        return contestMapper.toContestDetailResponse(contest);
+
+        List<Integer> problemIds = contest.getContestProblems().stream()
+                .map(cp -> cp.getProblem().getId())
+                .toList();
+
+        Set<Integer> finalAcceptedIds = problemService.getListAcceptedId();
+        Map<String, Map<Integer, Long>> stats = problemService.getProblemStats(problemIds);
+        Map<Integer, Long> passCountMap = stats.getOrDefault("pass", Map.of());
+        Map<Integer, Long> failCountMap = stats.getOrDefault("fail", Map.of());
+
+        List<ProblemResponse> problemResponses = contest.getContestProblems().stream()
+                .map(cp -> {
+                    Problem problem = cp.getProblem();
+                    ProblemResponse response = problemMapper.toProblemResponse(problem, true, finalAcceptedIds);
+                    response.setPassCount(passCountMap.getOrDefault(problem.getId(), 0L));
+                    response.setFailCount(failCountMap.getOrDefault(problem.getId(), 0L));
+                    return response;
+                })
+                .toList();
+
+        return ContestDetailResponse.builder()
+                .id(contest.getId())
+                .description(contest.getDescription())
+                .endTime(contest.getEndTime())
+                .numAttendees(contest.getParticipants().size())
+                .password(null)
+                .problems(problemResponses)
+                .startTime(contest.getStartTime())
+                .title(contest.getTitle())
+                .hasPassword(contest.getPassword() != null)
+                .build();
     }
 
     @Override
@@ -109,7 +190,7 @@ public class ContestService implements IContestService {
 
     @Override
     public ContestDetailResponse edit(Integer contestId) {
-        Contest contest = contestRepository.findById(contestId)
+        Contest contest = contestRepository.findFirstByIdAndDeletedFalse(contestId)
                 .orElseThrow(() -> new BadRequestException("Contest not found with id: " + contestId));
 
         if(!contest.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get()))
@@ -122,10 +203,11 @@ public class ContestService implements IContestService {
     public void joinContest(Integer contestId, String password) {
         String email = securityUtil.getCurrentUserLogin().get();
 
-        Contest contest = contestRepository.findById(contestId)
+        Contest contest = contestRepository.findFirstByIdAndDeletedFalse(contestId)
                 .orElseThrow(() -> new BadRequestException("Contest not found"));
 
-        User user = userRepository.findById(email)
+
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("User not found"));
 
         if (contestParticipantRepository.existsByContestIdAndUserId(contestId, user.getId())) {
@@ -143,6 +225,11 @@ public class ContestService implements IContestService {
             }
         }
 
+        LocalDateTime now = LocalDateTime.now();
+        if (contest.getEndTime().isBefore(now)) {
+            throw new BadRequestException("Contest has already ended");
+        }
+
         ContestParticipant participant = ContestParticipant.builder()
                 .contest(contest)
                 .user(user)
@@ -152,9 +239,10 @@ public class ContestService implements IContestService {
     }
 
     @Override
+    @Transactional
     public void unjoinContest(Integer contestId) {
         String email = securityUtil.getCurrentUserLogin().get();
-        User user = userRepository.findById(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("User not found"));
         if (!contestParticipantRepository.existsByContestIdAndUserId(contestId, user.getId())) {
             throw new BadRequestException("You haven't joined this contest");
@@ -162,4 +250,62 @@ public class ContestService implements IContestService {
         contestParticipantRepository.deleteByContestIdAndUserId(contestId, user.getId());
     }
 
+    @Override
+    public boolean hasUserJoinedContest(Integer contestId){
+        User user = userRepository.findByEmail(securityUtil.getCurrentUserLogin().get()).orElseThrow(() -> new BadRequestException("User not found"));
+        return contestParticipantRepository.existsByContestIdAndUserId(contestId, user.getId());
+    }
+
+    @Override
+    public ProblemResponse problemDetailForContest(Integer id, Integer contestId) {
+        Contest contest = contestRepository.findFirstById(contestId);
+        if(contest == null)
+            throw new BadRequestException("Contest not found");
+
+        LocalDateTime now = LocalDateTime.now();
+
+        if (now.isBefore(contest.getStartTime())) {
+            throw new BadRequestException("Contest has not started yet");
+        }
+
+        if (now.isAfter(contest.getEndTime())) {
+            throw new BadRequestException("Contest has already ended");
+        }
+
+        User user = userRepository.findByEmail(securityUtil.getCurrentUserLogin().get())
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        if(!contestParticipantRepository.existsByContestIdAndUserId(contestId, user.getId())){
+            throw new BadRequestException("You haven't joined this contest");
+        }
+
+        return problemService.problemDetailForContest(id, contestId);
+    }
+
+    @Override
+    public boolean isEditable(Integer contestId){
+        Contest contest = contestRepository.findFirstByIdAndDeletedFalse(contestId)
+                .orElseThrow(() -> new BadRequestException("Contest not found with id: " + contestId));
+
+        if(!contest.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get()))
+            return false;
+
+        return contest.getEndTime() == null || !contest.getEndTime().isBefore(LocalDateTime.now());
+    }
+
+    @Override
+    public List<MyContestResponse> getMyContests() {
+        List<Contest> contests = contestRepository.findByCreatedByOrderByCreatedAtDesc(securityUtil.getCurrentUserLogin().get());
+
+        Map<Integer, Boolean> map = contests.stream()
+                .collect(Collectors.toMap(
+                        Contest::getId,
+                        contest -> contest.getEndTime() == null
+                                || !contest.getEndTime().isBefore(LocalDateTime.now())
+                ));
+
+        return contests.stream()
+                .map(contest -> contestMapper.toMyContestResponse(contest, map))
+                .toList();
+    }
 }

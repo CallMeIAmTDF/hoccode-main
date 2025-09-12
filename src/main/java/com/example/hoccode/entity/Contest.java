@@ -2,7 +2,6 @@ package com.example.hoccode.entity;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,6 +9,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -42,7 +42,15 @@ public class Contest extends BaseEntity{
     @Column(name = "end_time")
     LocalDateTime endTime;
 
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Builder.Default
+    Boolean deleted = false;
+
     @OneToMany(mappedBy = "contest", cascade = CascadeType.ALL)
     @JsonIgnore
     private List<ContestProblem> contestProblems;
+
+    @OneToMany(mappedBy = "contest", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<ContestParticipant> participants = new ArrayList<>();
 }

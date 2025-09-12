@@ -22,22 +22,29 @@ public class NotificationController {
 
     @KafkaListener(topics = "notification-delivery")
     public void listenNotificationDelivery(NotificationEvent message){
-//        log.info("Message received: {}", message);
         emailService.sendEmailRegister(message);
     }
 
     @KafkaListener(topics = "forgot-password")
     public void listenNotificationForgotPassword(NotificationEvent message){
-//        log.info("Message received: {}", message);
         emailService.sendEmailForgotPassword(message);
     }
 
     @KafkaListener(topics = "contest-delivery", concurrency = "3")
     public void listenContestDelivery(NotificationEvent message){
-//        log.info("Message received: {}", message);
         CompletableFuture.runAsync(() -> {
             log.info("Sending email to {}", message.getRecipient());
             emailService.sendEmailContest(message);
         }, taskExecutor);
+    }
+
+    @KafkaListener(topics = "birthday")
+    public void listenNotificationHappyBirthday(NotificationEvent message){
+        emailService.sendEmailHappyBirthday(message);
+    }
+
+    @KafkaListener(topics = "streaks")
+    public void listenNotificationStreaks(NotificationEvent message){
+        emailService.sendEmailStreaks(message);
     }
 }

@@ -13,4 +13,6 @@ public interface ContestParticipantRepository extends JpaRepository<ContestParti
     void deleteByContestIdAndUserId(Integer contestId, String userId);
     long countByContestId(Integer contestId);
     List<ContestParticipant> findByContest(Contest contest);
+    List<ContestParticipant> findByContestId(Integer contestId);
+
 }

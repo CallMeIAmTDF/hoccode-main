@@ -42,6 +42,10 @@ public class EmailServiceImpl implements EmailService {
     @NonFinal
     String urlNoticeContest;
 
+    @Value("${api.path.noti-streak}")
+    @NonFinal
+    String urlNoticeStreak;
+
     public void sendEmailRegister(NotificationEvent message) {
         try {
             putPropsDataMail(convertDataMail(message, urlVerifyRegister), "verify_register");
@@ -62,6 +66,24 @@ public class EmailServiceImpl implements EmailService {
     public void sendEmailContest(NotificationEvent message) {
         try {
             putPropsDataMail(convertDataMail(message, urlNoticeContest), "notice_contest");
+        } catch (MessagingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void sendEmailHappyBirthday(NotificationEvent message) {
+        try {
+            putPropsDataMail(convertDataMail(message, ""), "happy_birthday");
+        } catch (MessagingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void sendEmailStreaks(NotificationEvent message) {
+        try {
+            putPropsDataMail(convertDataMail(message, urlNoticeStreak), "streak_noti");
         } catch (MessagingException e) {
             throw new RuntimeException(e);
         }

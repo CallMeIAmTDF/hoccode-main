@@ -1,8 +1,9 @@
 package com.example.hoccode.service.impl;
 
-import com.example.hoccode.config.CodeRunnerApiProperties;
+import com.example.hoccode.config.property.CodeRunnerApiProperties;
 import com.example.hoccode.dto.request.call.CodeRunnerRequest;
 import com.example.hoccode.dto.request.call.TestCaseSubmissionResponse;
+import com.example.hoccode.dto.response.call.CodeRunnerResponse;
 import com.example.hoccode.service.ICodeRunnerService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +27,7 @@ public class CodeRunnerService implements ICodeRunnerService {
     @Override
     public void execute(CodeRunnerRequest request) {
         WebClient client = WebClient.builder()
-                .baseUrl("http://" + config.getHost() + ":" + config.getPort())
+                .baseUrl(config.getProtocol() + "://" + config.getHost() + ":" + config.getPort())
                 .exchangeStrategies(ExchangeStrategies.builder()
                         .codecs(configurer -> configurer
                                 .defaultCodecs()
@@ -46,7 +47,7 @@ public class CodeRunnerService implements ICodeRunnerService {
     @Override
     public List<TestCaseSubmissionResponse> viewResults(String submissionId) {
         WebClient client = WebClient.builder()
-                .baseUrl("http://" + config.getHost() + ":" + config.getPort())
+                .baseUrl(config.getProtocol() + "://" + config.getHost() + ":" + config.getPort())
                 .exchangeStrategies(ExchangeStrategies.builder()
                         .codecs(configurer -> configurer
                                 .defaultCodecs()
@@ -58,6 +59,25 @@ public class CodeRunnerService implements ICodeRunnerService {
                 .uri("/submission/"+submissionId+"/results")
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<List<TestCaseSubmissionResponse>>() {})
+                .block();
+    }
+
+    @Override
+    public CodeRunnerResponse run(CodeRunnerRequest request) {
+        WebClient client = WebClient.builder()
+                .baseUrl(config.getProtocol() + "://" + config.getHost() + ":" + config.getPort())
+                .exchangeStrategies(ExchangeStrategies.builder()
+                        .codecs(configurer -> configurer
+                                .defaultCodecs()
+                                .maxInMemorySize(10 * 1024 * 1024))
+                        .build())
+                .build();
+        return client.post()
+                .uri("/run")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(CodeRunnerResponse.class)
                 .block();
     }
     /*

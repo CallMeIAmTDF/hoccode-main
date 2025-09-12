@@ -1,4 +1,4 @@
-package com.example.hoccode.config;
+package com.example.hoccode.config.property;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -10,4 +10,5 @@ import org.springframework.stereotype.Component;
 public class CodeRunnerApiProperties {
     String host;
     String port;
+    String protocol;
 }

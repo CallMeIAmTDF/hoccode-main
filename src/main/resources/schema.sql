@@ -34,6 +34,25 @@ SELECT 'e692cd89-e09e-4651-afb8-8956d349ff6c',
        0 WHERE NOT EXISTS (
     SELECT 1 FROM users WHERE email = 'user@gmail.com'
 );
+
+INSERT INTO users (id, created_at, created_by, updated_at, updated_by, active, avatar, dob, email, name, role, password, is_locked, point)
+SELECT 'e692cd89-e09e-4651-afb8-8956d349ff6t',
+       NOW(),
+       'system',
+       NOW(),
+       'system',
+       1,
+       NULL,
+       '2000-01-01',
+       'user2@gmail.com',
+       'Default User 2',
+       'USER',
+       '$2a$10$EJkL.sXN6Tg.NHzrmTk7DeWJf2lO/QYAJk7x7S41T4iHlgfimeUQu',
+       0,
+       0 WHERE NOT EXISTS (
+    SELECT 1 FROM users WHERE email = 'user2@gmail.com'
+);
+
 INSERT INTO users (id, created_at, created_by, updated_at, updated_by, active, avatar, dob, email, name, role, password, is_locked, point)
 SELECT 'f7a9b8cd-3f4b-4c6a-8c13-09ec03c00abc',
        NOW(),
@@ -81,6 +100,7 @@ CREATE TABLE IF NOT EXISTS problems (
     difficulty VARCHAR(20),
     is_contest_problem BOOLEAN,
     point INT,
+    deleted BOOLEAN DEFAULT false,
     created_at DATETIME,
     created_by VARCHAR(255),
     updated_at DATETIME,

@@ -6,6 +6,7 @@ import com.example.hoccode.dto.mapper.ProblemMapper;
 import com.example.hoccode.dto.projection.CategoryCountProjection;
 import com.example.hoccode.dto.request.ProblemSearchRequest;
 import com.example.hoccode.dto.request.create.CreateProblemRequest;
+import com.example.hoccode.dto.request.update.UpdateContestProblemRequest;
 import com.example.hoccode.dto.request.update.UpdateProblemRequest;
 import com.example.hoccode.dto.response.CategoryCountResponse;
 import com.example.hoccode.dto.response.ProblemResponse;
@@ -117,6 +118,11 @@ public class ProblemService implements IProblemService {
         spec = spec.and((root, query, cb) ->
                 cb.isFalse(root.get("isContestProblem"))
         );
+
+        spec = spec.and((root, query, cb) ->
+                cb.isFalse(root.get("deleted"))
+        );
+
         Set<Integer> finalAcceptedIds = getListAcceptedId();
 
         Page<Problem> problems = problemRepository.findAll(spec, pageable);
@@ -137,7 +143,7 @@ public class ProblemService implements IProblemService {
     @Override
     @Transactional
     public ProblemResponse update(Integer id, UpdateProblemRequest request) throws IdInvalidException {
-        Problem problem = problemRepository.findById(id)
+        Problem problem = problemRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new IdInvalidException("Problem not found"));
 
         if(problem.getIsContestProblem()){
@@ -193,24 +199,13 @@ public class ProblemService implements IProblemService {
         Integer pid = redis.getDailyChallenge();
         Problem problem;
         if(pid != null){
-            problem = problemRepository.findFirstById(pid);
+            problem = problemRepository.findFirstByIdAndDeletedFalse(pid);
         }
         else{
             problem = problemRepository.getDailyProblem();
             redis.setDailyChallenge(problem.getId());
         }
-
-        Set<Integer> finalAcceptedIds = getListAcceptedId();
-
-        List<Integer> problemIds = List.of(problem.getId());
-        Map<String, Map<Integer, Long>> stats = getProblemStats(problemIds);
-        Map<Integer, Long> passCountMap = stats.get("pass");
-        Map<Integer, Long> failCountMap = stats.get("fail");
-
-        ProblemResponse response = problemMapper.toProblemResponse(problem, true, finalAcceptedIds);
-        response.setPassCount(passCountMap.getOrDefault(problem.getId(), 0L));
-        response.setFailCount(failCountMap.getOrDefault(problem.getId(), 0L));
-        return response;
+        return getAProblem(problem);
     }
 
     @Override
@@ -226,7 +221,29 @@ public class ProblemService implements IProblemService {
                     .toList();
     }
 
-    private Set<Integer> getListAcceptedId(){
+    @Override
+    public ProblemResponse problemDetail(Integer id) {
+        Problem problem = problemRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new BadRequestException("Problem not found"));
+        if(problem.getIsContestProblem()){
+            throw new BadRequestException("Contest problem");
+        }
+        return getAProblem(problem);
+    }
+
+    @Override
+    public ProblemResponse problemDetailForContest(Integer id, Integer contestId) {
+        Problem problem = problemRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new BadRequestException("Problem not found"));
+        if(!problem.getIsContestProblem()){
+            throw new BadRequestException("Not a contest problem");
+        }
+        if(!Objects.equals(problem.getContestProblem().getContest().getId(), contestId)){
+            throw new BadRequestException("Not a contest problem of this contest");
+        }
+        return getAProblem(problem);
+    }
+
+    @Override
+    public Set<Integer> getListAcceptedId(){
         Optional<String> currentUserEmail = securityUtil.getCurrentUserLogin();
         Set<Integer> acceptedProblemIds = new HashSet<>();
         if (currentUserEmail.isPresent()) {
@@ -235,7 +252,8 @@ public class ProblemService implements IProblemService {
         return acceptedProblemIds;
     }
 
-    private Map<String, Map<Integer, Long>> getProblemStats(List<Integer> problemIds){
+    @Override
+    public Map<String, Map<Integer, Long>> getProblemStats(List<Integer> problemIds){
         Map<Integer, Long> passCountMap = new HashMap<>();
         Map<Integer, Long> failCountMap = new HashMap<>();
         for (Object[] row : submissionRepository.countSubmissionByProblemIds(problemIds)) {
@@ -249,5 +267,38 @@ public class ProblemService implements IProblemService {
                 "pass", passCountMap,
                 "fail", failCountMap
         );
+    }
+
+    public ProblemResponse getAProblem(Problem problem){
+        Set<Integer> finalAcceptedIds = getListAcceptedId();
+        List<Integer> problemIds = List.of(problem.getId());
+        Map<String, Map<Integer, Long>> stats = getProblemStats(problemIds);
+        Map<Integer, Long> passCountMap = stats.get("pass");
+        Map<Integer, Long> failCountMap = stats.get("fail");
+        ProblemResponse response = problemMapper.toProblemResponse(problem, true, finalAcceptedIds);
+        response.setPassCount(passCountMap.getOrDefault(problem.getId(), 0L));
+        response.setFailCount(failCountMap.getOrDefault(problem.getId(), 0L));
+        return response;
+    }
+
+    @Override
+    public Problem updateAllowedFields(Integer problemId, UpdateContestProblemRequest req) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new BadRequestException("Problem not found with id: " + problemId));
+
+        problem.getHints().clear();
+        problem.getTestCases().clear();
+
+
+        problem.setHints(req.getHints() != null ? req.getHints().stream().map(hint -> Hint.builder().problem(problem).description(hint).build()).toList() : List.of());
+        problem.setTestCases(req.getTestCases() == null ? List.of() : req.getTestCases().stream().map(testCase -> TestCase.builder().problem(problem).expectedOutput(testCase.getExpectedOutput()).input(testCase.getInput()).isHidden(testCase.getIsHidden()).build()).toList());
+        if (req.getFollowUp() != null) {
+            problem.setFollowUp(req.getFollowUp());
+        }
+        if (req.getConstrains() != null) {
+            problem.setConstrains(req.getConstrains());
+        }
+
+        return problemRepository.save(problem);
     }
 }

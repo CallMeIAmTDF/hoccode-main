@@ -32,24 +32,28 @@ public class StreakService implements IStreakService {
             LocalDate lastDate = streak.getUpdatedAt() != null ? streak.getUpdatedAt().toLocalDate() : streak.getCreatedAt().toLocalDate();
             // đã update
             if(lastDate.equals(today)){
+                System.out.println("đã update");
                 return;
             }
             // ngày hôm qua
             else if(lastDate.equals(today.minusDays(1))){
                 streak.setCurrentStreak(streak.getCurrentStreak() + 1);
+                System.out.println("ngày hôm qua");
             }
             // mất chuỗi
             else {
-                streak.setCurrentStreak(0);
+                streak.setCurrentStreak(1);
+                System.out.println("mất chuỗi");
             }
             if (streak.getCurrentStreak() > streak.getMaxStreak()) {
                 streak.setMaxStreak(streak.getCurrentStreak());
             }
         }else{
+            System.out.println("Streak not found");
             streak = Streak.builder()
                     .user(u)
-                    .maxStreak(0)
-                    .currentStreak(0)
+                    .maxStreak(1)
+                    .currentStreak(1)
                     .build();
         }
         streakRepository.save(streak);

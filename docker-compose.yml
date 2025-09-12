@@ -15,7 +15,7 @@ services:
     ports:
       - "6379:6379"
       - "8001:8001"
-#    restart: always
+  #    restart: always
 
   kafka:
     image: 'bitnami/kafka:3.7.0'
@@ -31,3 +31,22 @@ services:
       - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092,EXTERNAL://localhost:9094
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  code-runner:
+    image: iamtdf/code-runner:latest
+    container_name: code-runner
+    ports:
+      - "1337:1337"
+    environment:
+      - CALLBACK_API_URL=http://host.docker.internal:8080/submission/handleCallBackApiHeheheheasd
+      - TZ=Asia/Ho_Chi_Minh
+      - REDIS_ADDR=redis-stack-local:6379
+    restart: unless-stopped
+    depends_on:
+      - redis-stack

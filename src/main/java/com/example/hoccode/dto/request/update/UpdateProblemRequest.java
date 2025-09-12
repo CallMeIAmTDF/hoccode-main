@@ -1,11 +1,16 @@
 package com.example.hoccode.dto.request.update;
 
 import com.example.hoccode.util.constant.DifficultyEnum;
-import lombok.Data;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
 
 import java.util.List;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpdateProblemRequest {
     private String title;
     private String description;

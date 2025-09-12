@@ -1,7 +1,11 @@
 package com.example.hoccode.controller;
 
+import com.example.hoccode.advice.exception.IdInvalidException;
 import com.example.hoccode.dto.ApiResponse;
 import com.example.hoccode.dto.request.create.CreateContestRequest;
+import com.example.hoccode.dto.request.update.UpdateContestRequest;
+import com.example.hoccode.dto.response.MyContestResponse;
+import com.example.hoccode.dto.response.ProblemResponse;
 import com.example.hoccode.dto.response.contest.ContestDetailResponse;
 import com.example.hoccode.dto.response.contest.ContestLeaderboardResponse;
 import com.example.hoccode.dto.response.contest.ContestResponse;
@@ -49,7 +53,7 @@ public class ContestController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<Contest>> update(CreateContestRequest request, @PathVariable(value = "0") Integer id){
+    public ResponseEntity<ApiResponse<Contest>> update(@RequestBody UpdateContestRequest request, @PathVariable("id") Integer id) throws IdInvalidException {
         ApiResponse<Contest> apiResponse = ApiResponse.<Contest>builder()
                 .code(HttpStatus.OK.value())
                 .message("Update Contest")
@@ -97,6 +101,20 @@ public class ContestController {
                 .body(apiResponse);
     }
 
+    @PostMapping("/{id}/unjoin")
+    public ResponseEntity<ApiResponse<Void>> unjoinContest(
+            @PathVariable Integer id
+    ) {
+        contestService.unjoinContest(id);
+        ApiResponse<Void> apiResponse = ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("Un join Contest")
+                .data(null)
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
     @GetMapping("/{id}/leaderboard")
     public ResponseEntity<ApiResponse<ContestLeaderboardResponse>> getLeaderboard(@PathVariable Integer id, @RequestParam(defaultValue = "1") int page){
         int size = 15;
@@ -110,4 +128,49 @@ public class ContestController {
     }
 
 
+    @GetMapping("/{id}/isJoined")
+    public ResponseEntity<ApiResponse<Boolean>> isJoined(@PathVariable Integer id){
+        ApiResponse<Boolean> apiResponse = ApiResponse.<Boolean>builder()
+                .code(HttpStatus.OK.value())
+                .message("Has User Joined Contest")
+                .data(contestService.hasUserJoinedContest(id))
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
+    @GetMapping("/{id}/isEditable")
+    public ResponseEntity<ApiResponse<Boolean>> isEditable(@PathVariable Integer id){
+        ApiResponse<Boolean> apiResponse = ApiResponse.<Boolean>builder()
+                .code(HttpStatus.OK.value())
+                .message("Is editable")
+                .data(contestService.isEditable(id))
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
+
+    @GetMapping("/{id}/problem/{pid}")
+    public ResponseEntity<ApiResponse<ProblemResponse>> getProblem(@PathVariable(required = true) Integer id, @PathVariable(required = true) Integer pid){
+        ApiResponse<ProblemResponse> apiResponse = ApiResponse.<ProblemResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Get Problem")
+                .data(contestService.problemDetailForContest(pid, id))
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<List<MyContestResponse>>> getProblem(){
+        ApiResponse<List<MyContestResponse>> apiResponse = ApiResponse.<List<MyContestResponse>>builder()
+                .code(HttpStatus.OK.value())
+                .message("Get My Contest")
+                .data(contestService.getMyContests())
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
 }

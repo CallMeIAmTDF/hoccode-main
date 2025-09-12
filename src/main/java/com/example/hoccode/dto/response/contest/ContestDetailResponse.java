@@ -20,4 +20,7 @@ public class ContestDetailResponse {
     private LocalDateTime endTime;
     private Integer numAttendees;
     private List<ProblemResponse> problems;
+
+    @Builder.Default
+    private Boolean hasPassword = false;
 }
