@@ -2,7 +2,11 @@ package com.example.hoccode.repository;
 
 import com.example.hoccode.dto.projection.IContestLeaderboardProjection;
 import com.example.hoccode.dto.projection.IContestProblemStatusProjection;
+import com.example.hoccode.dto.projection.ProblemSubmissionCount;
+
+import com.example.hoccode.dto.projection.SubmissionWithProblemTitleProjection;
 import com.example.hoccode.dto.response.SubmissionCategoryCount;
+import com.example.hoccode.dto.response.SubmissionProblemResponse;
 import com.example.hoccode.entity.Submission;
 import com.example.hoccode.util.constant.StatusEnum;
 import org.springframework.data.domain.Page;
@@ -184,4 +188,115 @@ public interface SubmissionRepository extends JpaRepository<Submission, String> 
         ORDER BY d
     """, nativeQuery = true)
     List<Object[]> countSubmissionLast10Days(@Param("email") String email);
+
+
+//    @Query(value = """
+//        SELECT s.*
+//        FROM submissions s
+//        JOIN problems p ON p.id = s.pid
+//        JOIN contest_problems cp ON cp.problem_id = p.id
+//        WHERE cp.contest_id = :contestId
+//    """, nativeQuery = true)
+//    List<Submission> findAllByContestId(@Param("contestId") Integer contestId);
+
+
+    @Query(value = """
+        SELECT s.*
+        FROM submissions s
+        JOIN problems p ON p.id = s.pid
+        JOIN contest_problems cp ON cp.problem_id = p.id
+        WHERE cp.contest_id = :contestId
+          AND s.created_by = :email
+    """, nativeQuery = true)
+    List<Submission> findAllByContestIdAndUserEmail(
+            @Param("contestId") Integer contestId,
+            @Param("email") String email
+    );
+
+
+    @Query("""
+        SELECT new com.example.hoccode.dto.projection.ProblemSubmissionCount(p, COUNT(s))
+        FROM Problem p
+        JOIN ContestProblem cp ON cp.problem.id = p.id
+        LEFT JOIN Submission s ON s.pid = p.id
+        WHERE cp.contest.id = :contestId
+        GROUP BY p
+""")
+    List<ProblemSubmissionCount> countSubmissionsByProblem(
+            @Param("contestId") Integer contestId
+    );
+
+
+    @Query(value = """
+        SELECT s.created_by AS username,
+               p.title AS problemName,
+               s.status AS status,
+               s.created_at AS submitTime
+        FROM submissions s
+        JOIN problems p ON p.id = s.pid
+        JOIN contest_problems cp ON cp.problem_id = p.id
+        WHERE cp.contest_id = :contestId
+        ORDER BY s.created_at DESC
+        LIMIT :limit
+    """, nativeQuery = true)
+    List<Object[]> findRecentSubmissions(@Param("contestId") Integer contestId, @Param("limit") Integer limit);
+
+
+    @Query("""
+        SELECT new com.example.hoccode.dto.response.SubmissionProblemResponse(
+                    s.id,
+                    s.pid,
+                    new com.example.hoccode.dto.response.SimpleProblemInfo(p.id, p.title, p.difficulty),
+                    s.code,
+                    s.language,
+                    s.status,
+                    s.totalTestCases,
+                    s.passedTestCase,
+                    s.message,
+                    s.maxTime,
+                    s.createdAt,
+                    s.createdBy,
+                    s.updatedAt,
+                    s.updatedBy
+                )
+                FROM Submission s
+                JOIN Problem p ON p.id = s.pid
+                JOIN ContestProblem cp ON cp.problem.id = p.id
+                WHERE cp.contest.id = :contestId
+                ORDER BY s.createdAt DESC
+    """)
+    List<SubmissionProblemResponse> findAllByContestId(@Param("contestId") Integer contestId);
+
+
+    @Query(
+            value = """
+        SELECT sub.id AS submissionId,
+               sub.pid AS problemId,
+               sub.code AS code,
+               sub.language AS language,
+               sub.created_by AS username,
+               sub.status AS status,
+               p.title AS problemTitle
+        FROM (
+            SELECT s.id,
+                   s.pid,
+                   s.code,
+                   s.language,
+                   s.created_by,
+                   s.status,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY s.created_by, s.pid
+                       ORDER BY s.created_at ASC
+                   ) as rn
+            FROM submissions s
+            JOIN contest_problems cp ON cp.problem_id = s.pid
+            WHERE cp.contest_id = :contestId
+              AND s.status = 'ACCEPTED'
+        ) sub
+        JOIN problems p ON p.id = sub.pid
+        WHERE sub.rn = 1
+        """,
+            nativeQuery = true
+    )
+    List<SubmissionWithProblemTitleProjection> findFirstAcceptedSubmissionsWithProblemTitle(@Param("contestId") Integer contestId);
 }

@@ -5,11 +5,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class SocketMessage {
-    private SocketType type;
-    private String message;
-    private Object data;
-}
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public class SocketMessage {
+        private SocketType type;
+        private String message;
+        private Object data;
+    }

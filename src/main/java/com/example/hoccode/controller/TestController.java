@@ -1,12 +1,17 @@
 package com.example.hoccode.controller;
 
 import com.example.hoccode.repository.SubmissionRepository;
+import com.example.hoccode.service.IContestService;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/test")
@@ -15,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class TestController {
     KafkaTemplate<String, Object> kafkaTemplate;
     SubmissionRepository submissionRepository;
+    IContestService contestService;
 //    @GetMapping("/test")
 //    public Object hello(){
 ////        int totalUsers = 100;
@@ -43,4 +49,9 @@ public class TestController {
 //
 //        return submissionRepository.countAcceptedByCategory();
 //    }
+
+    @GetMapping("/{contestId}")
+    public Map<String, Object> getContestStats(@PathVariable Integer contestId){
+        return contestService.getContestStats(contestId);
+    }
 }

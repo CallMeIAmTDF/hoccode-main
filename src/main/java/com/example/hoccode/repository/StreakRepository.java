@@ -19,6 +19,6 @@ public interface StreakRepository extends JpaRepository<Streak, Integer> {
 
     @Query("SELECT s FROM Streak s " +
             "WHERE s.updatedAt IS NULL " +
-            "   OR s.updatedAt < :todayStart")
+            "   OR s.updatedAt < :todayStart AND s.currentStreak > 0")
     List<Streak> findNotUpdatedToday(@Param("todayStart") LocalDateTime todayStart);
 }

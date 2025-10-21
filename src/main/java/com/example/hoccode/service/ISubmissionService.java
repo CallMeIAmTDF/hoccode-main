@@ -5,6 +5,7 @@ import com.example.hoccode.dto.record.ProblemStats;
 import com.example.hoccode.dto.request.SubmissionUpdateRequest;
 import com.example.hoccode.dto.request.create.CreateSubmissionRequest;
 import com.example.hoccode.dto.response.SubmissionCategoryCount;
+import com.example.hoccode.dto.response.SubmissionProblemResponse;
 import com.example.hoccode.dto.response.call.CodeRunnerResponse;
 import com.example.hoccode.dto.response.contest.ContestLeaderboardResponse;
 import com.example.hoccode.entity.Submission;
@@ -35,4 +36,6 @@ public interface ISubmissionService {
     ProblemStats getProblemStats();
 
     List<DailySubmission> getDailySubmissions();
+
+    List<SubmissionProblemResponse> getAllContestSubmission(Integer contestId);
 }

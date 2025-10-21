@@ -51,14 +51,19 @@ auth:
     forgot-password-code-duration: 86400000
 
 code-runner-api:
-  protocol: http
-  host: localhost
-  port: 1337
+  protocol: ${CODE_RUNNER_API_PROTOCOL:http}
+  host: ${CODE_RUNNER_API_HOST:localhost}
+  port: ${CODE_RUNNER_API_PORT:1337}
 
 gpt-api:
-  protocol: http
-  host: localhost
-  port: 1111
+  protocol: ${GPT_API_PROTOCOL:http}
+  host: ${GPT_API_HOST:localhost}
+  port: ${GPT_API_PORT:1111}
+
+plagiarism-api:
+  protocol: ${PLAGIARISM_API_PROTOCOL:http}
+  host: ${PLAGIARISM_API_HOST:localhost}
+  port: ${PLAGIARISM_API_PORT:8000}
 
 mailServer:
   host: smtp.gmail.com
@@ -75,4 +80,6 @@ api:
     verify-forgot-password: "/auth/forgot?code="
     notice-contest: "/contest/"
     noti-streak: "/learn"
+    noti-plagiarism: "/profile/contest/"
+
 

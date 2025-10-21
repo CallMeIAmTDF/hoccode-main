@@ -1,7 +1,6 @@
 package com.example.hoccode.entity;
 
 import com.example.hoccode.util.constant.StatusEnum;
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
@@ -9,6 +8,21 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
+//@SqlResultSetMapping(
+//        name = "SubmissionWithProblemTitleMapping",
+//        classes = @ConstructorResult(
+//                targetClass = SubmissionWithProblemTitleDTO.class,
+//                columns = {
+//                        @ColumnResult(name = "submissionId", type = String.class),
+//                        @ColumnResult(name = "problemId", type = String.class),
+//                        @ColumnResult(name = "code", type = String.class),
+//                        @ColumnResult(name = "language", type = String.class),
+//                        @ColumnResult(name = "username", type = String.class),
+//                        @ColumnResult(name = "status", type = String.class),
+//                        @ColumnResult(name = "problemTitle", type = String.class)
+//                }
+//        )
+//)
 @Table(name = "submissions")
 @Getter
 @Setter

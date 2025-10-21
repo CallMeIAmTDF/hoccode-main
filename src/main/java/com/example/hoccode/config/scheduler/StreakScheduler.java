@@ -38,7 +38,7 @@ public class StreakScheduler {
         LocalDate today = LocalDate.now();
         LocalDateTime todayStart = today.atStartOfDay();
         List<Streak> streaks = streakRepository.findNotUpdatedToday(todayStart);
-
+        if(streaks.isEmpty()) return;
         streaks.forEach(streak -> {
             NotificationEvent event = NotificationEvent.builder()
                     .channel("EMAIL")

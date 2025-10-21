@@ -1,6 +1,7 @@
 package com.example.hoccode.entity;
 
 import com.example.hoccode.util.constant.NotificationStatusEnum;
+import com.example.hoccode.util.constant.NotificationTypeEnum;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -25,5 +26,13 @@ public class Notification extends BaseEntity{
     @Column(name = "redirect_url")
     String redirectUrl;
 
+    String message;
+
+    String title;
+
+    @Enumerated(EnumType.STRING)
     NotificationStatusEnum status;
+
+    @Enumerated(EnumType.STRING)
+    NotificationTypeEnum type;
 }

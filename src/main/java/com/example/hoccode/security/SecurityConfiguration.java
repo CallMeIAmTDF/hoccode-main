@@ -29,6 +29,7 @@ public class SecurityConfiguration {
             "/test/**",
             "/users/forgotPassword",
             "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui/index.html#/",
+            "/contest/*/plagiarism/callback",
             "/submission/handleCallBackApiHeheheheasd",
     };
 

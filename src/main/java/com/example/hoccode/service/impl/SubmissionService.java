@@ -10,11 +10,11 @@ import com.example.hoccode.dto.request.SubmissionUpdateRequest;
 import com.example.hoccode.dto.request.call.CodeRunnerRequest;
 import com.example.hoccode.dto.request.create.CreateSubmissionRequest;
 import com.example.hoccode.dto.response.SubmissionCategoryCount;
+import com.example.hoccode.dto.response.SubmissionProblemResponse;
 import com.example.hoccode.dto.response.call.CodeRunnerResponse;
 import com.example.hoccode.dto.response.contest.ContestLeaderboardEntryDTO;
 import com.example.hoccode.dto.response.contest.ContestLeaderboardResponse;
 import com.example.hoccode.dto.response.contest.ContestProblemStatusResponse;
-import com.example.hoccode.dto.response.pageable.PaginationInfo;
 import com.example.hoccode.entity.*;
 import com.example.hoccode.repository.*;
 import com.example.hoccode.service.ICodeRunnerService;
@@ -29,9 +29,6 @@ import jakarta.transaction.Transactional;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.sql.Date;
@@ -332,6 +329,12 @@ public class SubmissionService implements ISubmissionService {
         return rows.stream()
                 .map(r -> new DailySubmission(r[0].toString(), (Long) r[1]))
                 .toList();
+    }
+
+
+    @Override
+    public List<SubmissionProblemResponse> getAllContestSubmission(Integer contestId){
+        return submissionRepository.findAllByContestId(contestId);
     }
 }
 

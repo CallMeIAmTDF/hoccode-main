@@ -10,6 +10,7 @@ import com.example.hoccode.dto.response.contest.ContestResponse;
 import com.example.hoccode.entity.Contest;
 
 import java.util.List;
+import java.util.Map;
 
 public interface IContestService {
     Contest create(CreateContestRequest request);
@@ -33,6 +34,10 @@ public interface IContestService {
     boolean isEditable(Integer contestId);
 
     List<MyContestResponse> getMyContests();
+
+    Map<String, Object> getContestStats(Integer contestId);
+
+    List<String> getAllContestParticipant(Integer contestId);
 
     // get problem in contest
 }

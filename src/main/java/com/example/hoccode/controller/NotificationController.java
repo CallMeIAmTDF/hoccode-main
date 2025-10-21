@@ -47,4 +47,9 @@ public class NotificationController {
     public void listenNotificationStreaks(NotificationEvent message){
         emailService.sendEmailStreaks(message);
     }
+
+    @KafkaListener(topics = "plagiarism")
+    public void listenNotificationPlagiarism(NotificationEvent message){
+        emailService.sendEmailPlagiarism(message);
+    }
 }

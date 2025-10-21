@@ -5,13 +5,18 @@ import com.example.hoccode.dto.ApiResponse;
 import com.example.hoccode.dto.request.create.CreateContestRequest;
 import com.example.hoccode.dto.request.update.UpdateContestRequest;
 import com.example.hoccode.dto.response.MyContestResponse;
+import com.example.hoccode.dto.response.PlagiarismDetailResponse;
 import com.example.hoccode.dto.response.ProblemResponse;
+import com.example.hoccode.dto.response.SubmissionProblemResponse;
 import com.example.hoccode.dto.response.contest.ContestDetailResponse;
 import com.example.hoccode.dto.response.contest.ContestLeaderboardResponse;
 import com.example.hoccode.dto.response.contest.ContestResponse;
 import com.example.hoccode.entity.Contest;
+import com.example.hoccode.entity.Submission;
 import com.example.hoccode.service.IContestService;
+import com.example.hoccode.service.IPlagiarismService;
 import com.example.hoccode.service.ISubmissionService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -20,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/contest")
@@ -28,6 +34,7 @@ import java.util.List;
 public class ContestController {
     IContestService contestService;
     ISubmissionService submissionService;
+    IPlagiarismService plagiarismService;
 
     @PostMapping("")
     public ResponseEntity<ApiResponse<Contest>> create(@RequestBody CreateContestRequest request){
@@ -164,11 +171,80 @@ public class ContestController {
 
 
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<List<MyContestResponse>>> getProblem(){
+    public ResponseEntity<ApiResponse<List<MyContestResponse>>> getMyContests(){
         ApiResponse<List<MyContestResponse>> apiResponse = ApiResponse.<List<MyContestResponse>>builder()
                 .code(HttpStatus.OK.value())
                 .message("Get My Contest")
                 .data(contestService.getMyContests())
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
+    @GetMapping("/{id}/stats")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getContestStats(@PathVariable Integer id){
+        ApiResponse<Map<String, Object>> apiResponse = ApiResponse.<Map<String, Object>>builder()
+                .code(HttpStatus.OK.value())
+                .message("Get Contest Stats")
+                .data(contestService.getContestStats(id))
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
+    @GetMapping("/{id}/submissions")
+    public ResponseEntity<ApiResponse<List<SubmissionProblemResponse>>> getContestSubmission(@PathVariable Integer id){
+        ApiResponse<List<SubmissionProblemResponse>> apiResponse = ApiResponse.<List<SubmissionProblemResponse>>builder()
+                .code(HttpStatus.OK.value())
+                .message("Get Contest Submissions")
+                .data(submissionService.getAllContestSubmission(id))
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
+    @GetMapping("/{id}/participants")
+    public ResponseEntity<ApiResponse<List<String>>> getContestPaticipants(@PathVariable Integer id){
+        ApiResponse<List<String>> apiResponse = ApiResponse.<List<String>>builder()
+                .code(HttpStatus.OK.value())
+                .message("Get Contest Participant")
+                .data(contestService.getAllContestParticipant(id))
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
+    @GetMapping("/{id}/plagiarism")
+    public ResponseEntity<ApiResponse<List<PlagiarismDetailResponse>>> getContestPlagiarism(@PathVariable Integer id) throws JsonProcessingException {
+        List<PlagiarismDetailResponse> data = plagiarismService.plagiarismChecking(id);
+        ApiResponse<List<PlagiarismDetailResponse>> apiResponse = ApiResponse.<List<PlagiarismDetailResponse>>builder()
+                .code(HttpStatus.OK.value())
+                .message(data == null ? "Đang kiểm tra, vui lòng đợi" : "Lấy dữ liệu gian lận thành công")
+                .data(data)
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
+    @GetMapping("/{id}/plagiarism/callback")
+    public ResponseEntity<ApiResponse<Void>> callbackContestPlagiarism(@PathVariable Integer id){
+//        PlagiarismDetailResponse data = plagiarismService.plagiarismChecking(id);
+        plagiarismService.callBack(id);
+        ApiResponse<Void> apiResponse = ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("callback")
+                .data(null)
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
+    @GetMapping("/{id}/isPlagiarismChecked")
+    public ResponseEntity<ApiResponse<Boolean>> isPlagiarismChecked(@PathVariable Integer id){
+        ApiResponse<Boolean> apiResponse = ApiResponse.<Boolean>builder()
+                .code(HttpStatus.OK.value())
+                .message("callback")
+                .data(plagiarismService.isPlagiarismChecked(id))
                 .build();
         return ResponseEntity.ok()
                 .body(apiResponse);

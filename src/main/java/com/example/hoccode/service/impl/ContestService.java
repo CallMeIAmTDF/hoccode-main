@@ -9,14 +9,18 @@ import com.example.hoccode.dto.request.update.UpdateContestProblemRequest;
 import com.example.hoccode.dto.request.update.UpdateContestRequest;
 import com.example.hoccode.dto.response.MyContestResponse;
 import com.example.hoccode.dto.response.ProblemResponse;
+import com.example.hoccode.dto.response.ProblemStatsResponse;
+import com.example.hoccode.dto.response.RecentSubmissionResponse;
 import com.example.hoccode.dto.response.contest.ContestDetailResponse;
 import com.example.hoccode.dto.response.contest.ContestResponse;
 import com.example.hoccode.entity.*;
 import com.example.hoccode.repository.ContestParticipantRepository;
 import com.example.hoccode.repository.ContestRepository;
+import com.example.hoccode.repository.SubmissionRepository;
 import com.example.hoccode.repository.UserRepository;
 import com.example.hoccode.service.IContestService;
 import com.example.hoccode.service.IProblemService;
+import com.example.hoccode.service.ISubmissionService;
 import com.example.hoccode.util.SecurityUtil;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
@@ -26,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -42,6 +47,9 @@ public class ContestService implements IContestService {
     ContestParticipantRepository contestParticipantRepository;
     UserRepository userRepository;
     ProblemMapper problemMapper;
+    SubmissionRepository submissionRepository;
+    ISubmissionService submissionService;
+
 
     @Override
     public Contest create(CreateContestRequest request) {
@@ -307,5 +315,66 @@ public class ContestService implements IContestService {
         return contests.stream()
                 .map(contest -> contestMapper.toMyContestResponse(contest, map))
                 .toList();
+    }
+
+    @Override
+    public Map<String, Object> getContestStats(Integer contestId){
+        Contest contest = contestRepository.findFirstById(contestId);
+        if(contest == null){
+            throw new BadRequestException("Contest not found with id: " + contestId);
+        }
+
+        if(!contest.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get())){
+            throw new BadRequestException("Access Denied");
+        }
+
+        Map<String, Object> stats = new HashMap<>();
+
+        List<Object[]> rows = contestRepository.findProblemStatsByContestId(contestId);
+        List<Object[]> recents = submissionRepository.findRecentSubmissions(contestId, 5);
+        stats.put("contest", contest);
+
+        stats.put("countSubmissionByProblem", rows.stream().map(row -> new ProblemStatsResponse(
+                ((Number) row[0]).intValue(),   // problemId
+                (String) row[1],                // title
+                (String) row[2],                // difficulty
+                ((Number) row[3]).longValue(),  // submissionCount
+                ((Number) row[4]).longValue(),  // solvedCount
+                row[6] != null ? ((Number) row[6]).doubleValue() : 0.0, // averageScore
+                row[5] != null ? ((Number) row[5]).doubleValue() : 0.0
+        )).collect(Collectors.toList()));
+
+
+        Map<String, Object> activity = new HashMap<>();
+        activity.put("recentSubmissions", recents.stream().map(row -> new RecentSubmissionResponse(
+                (String) row[0],  // username
+                (String) row[1],  // problemName
+                (String) row[2],  // status
+                row[3] instanceof Timestamp ts ? ts.toLocalDateTime() : (LocalDateTime) row[3]
+        )).collect(Collectors.toList()));
+        stats.put("contestActivity", activity);
+
+        stats.put("leaderboard", submissionService.getContestLeaderboard(contestId, 0, 0));
+        return stats;
+    }
+
+    @Override
+    public List<String> getAllContestParticipant(Integer contestId){
+        Contest contest = contestRepository.findFirstById(contestId);
+        if(contest == null){
+            throw new BadRequestException("Contest not found with id: " + contestId);
+        }
+
+        if(!contest.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get())){
+            throw new BadRequestException("Access Denied");
+        }
+
+        List<ContestParticipant> cp = contestParticipantRepository.findByContest(contest);
+
+        if(cp == null || cp.isEmpty()){
+            return List.of();
+        }
+
+        return cp.stream().map(c -> c.getUser().getEmail()).toList();
     }
 }

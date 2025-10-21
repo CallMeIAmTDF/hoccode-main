@@ -1,26 +1,26 @@
 package com.example.hoccode.service.impl;
 
+import com.example.hoccode.advice.exception.BadRequestException;
 import com.example.hoccode.dto.SocketMessage;
 import com.example.hoccode.dto.request.create.CreateSubmissionRequest;
+import com.example.hoccode.dto.response.ProblemResponse;
 import com.example.hoccode.dto.response.call.CodeRunnerResponse;
+import com.example.hoccode.entity.Notification;
 import com.example.hoccode.entity.Problem;
 import com.example.hoccode.entity.Room;
 import com.example.hoccode.entity.RoomUser;
-import com.example.hoccode.repository.ProblemRepository;
-import com.example.hoccode.repository.RoomRepository;
-import com.example.hoccode.repository.RoomUserRepository;
-import com.example.hoccode.repository.SubmissionRepository;
+import com.example.hoccode.repository.*;
+import com.example.hoccode.service.IProblemService;
 import com.example.hoccode.service.ISubmissionService;
 import com.example.hoccode.service.MatchmakingService;
 import com.example.hoccode.util.RandomStringUtil;
 import com.example.hoccode.util.SecurityUtil;
+import com.example.hoccode.util.constant.NotificationStatusEnum;
+import com.example.hoccode.util.constant.NotificationTypeEnum;
 import com.example.hoccode.util.constant.RoomStatus;
 import com.example.hoccode.util.constant.SocketType;
 import jakarta.transaction.Transactional;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -31,6 +31,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,12 +50,16 @@ public class MatchmakingServiceImpl implements MatchmakingService {
     private SecurityUtil securityUtil;
     private ISubmissionService submissionService;
     private SubmissionRepository submissionRepo;
+    IProblemService problemService;
+    NotificationRepository notificationRepository;
+
+    private int MAX_PLAYER = 2;
 
     @Override
     @Transactional
     public void joinMatchmaking() {
         String email = securityUtil.getCurrentUserLogin()
-                .orElseThrow(() -> new IllegalStateException("User not authenticated"));
+                .orElseThrow(() -> new BadRequestException("Người dùng chưa được xác thực"));
 
         Optional<Room> activeRoom = roomRepo.findActiveRoomByUserId(email);
         if (activeRoom.isPresent()) {
@@ -63,8 +69,15 @@ public class MatchmakingServiceImpl implements MatchmakingService {
                     email,
                     "/queue",
                     new SocketMessage(SocketType.ROOM_REJOIN, "Rejoined room",
-                            new RoomJoinResponse(room.getId(), room.getStatus(), room.getProblemId()))
+                            new RoomJoinResponse(room.getId(), room.getStatus(), RoomStatus.STARTED.equals(room.getStatus()) ? problemService.problemDetail(room.getProblemId()) : null))
             );
+
+            webSocketTemplate.convertAndSendToUser(
+                    email,
+                    "/queue",
+                    new SocketMessage(SocketType.TIME_REMAIN, "Thời gian còn lại...", RoomStatus.STARTED.equals(room.getStatus()) ? room.getStartedAt() : room.getCreatedAt())
+            );
+
             return;
         }
 
@@ -82,17 +95,27 @@ public class MatchmakingServiceImpl implements MatchmakingService {
         List<Room> openLobbies = roomRepo.findOpenLobbies();
         Room lobby = openLobbies.isEmpty() ? createNewLobby() : openLobbies.get(0);
 
+//        long count = roomUserRepo.countByRoomId(lobby.getId());
+        long count = roomUserRepo.countByRoomId(lobby.getId());
+
         RoomUser ru = RoomUser.builder()
                 .roomId(lobby.getId())
                 .userId(email)
+                .score(0)
+                .rank((int) (count + 1))
                 .build();
         roomUserRepo.save(ru);
 
         notifyExistingUsers(lobby, email);
         sendUserListToNewUser(lobby, email);
 
-        long count = roomUserRepo.countByRoomId(lobby.getId());
-        if (count >= 1) {
+        webSocketTemplate.convertAndSendToUser(
+                email,
+                "/queue",
+                new SocketMessage(SocketType.TIME_REMAIN, "Thời gian còn lại...", lobby.getCreatedAt())
+        );
+        count += 1;
+        if (count >= MAX_PLAYER) {
             startRoom(lobby);
         }
     }
@@ -118,7 +141,7 @@ public class MatchmakingServiceImpl implements MatchmakingService {
                     ru.getUserId(),
                     "/queue",
                     new SocketMessage(SocketType.ROOM_START, "Phòng bắt đầu! Room ID: " + room.getId(),
-                            new RoomJoinResponse(room.getId(), room.getStatus(), room.getProblemId()))
+                            new RoomJoinResponse(room.getId(), room.getStatus(), problemService.problemDetail(room.getProblemId())))
             );
         }
     }
@@ -130,7 +153,7 @@ public class MatchmakingServiceImpl implements MatchmakingService {
                 webSocketTemplate.convertAndSendToUser(
                         ru.getUserId(),
                         "/queue",
-                        new SocketMessage(SocketType.NEW_USER, "New user joined: " + newUserEmail,
+                        new SocketMessage(SocketType.NEW_USER, newUserEmail,
                                 new UserJoinResponse(newUserEmail))
                 );
             }
@@ -140,8 +163,8 @@ public class MatchmakingServiceImpl implements MatchmakingService {
     private void sendUserListToNewUser(Room room, String newUserEmail) {
         List<RoomUser> users = roomUserRepo.findByRoomId(room.getId());
         List<String> userEmails = users.stream()
+                .sorted(Comparator.comparing(RoomUser::getId))
                 .map(RoomUser::getUserId)
-                .filter(email -> !email.equals(newUserEmail))
                 .toList();
         webSocketTemplate.convertAndSendToUser(
                 newUserEmail,
@@ -152,17 +175,17 @@ public class MatchmakingServiceImpl implements MatchmakingService {
     }
 
     @Override
-    @Scheduled(fixedRate = 10000)
+    @Scheduled(fixedRate = 4000)
     @Transactional
     public void checkLobbyTimeouts() {
         List<Room> lobbies = roomRepo.findAllByStatus(RoomStatus.LOBBY);
         for (Room lobby : lobbies) {
             long minutesPassed = ChronoUnit.MINUTES.between(lobby.getCreatedAt(), LocalDateTime.now());
-            if (minutesPassed > 2) {
+            if (minutesPassed >= 2) {
                 long count = roomUserRepo.countByRoomId(lobby.getId());
                 String message = count < 4
-                        ? "Phòng đợi hủy do chưa đủ 4 người. Thoát phòng."
-                        : "Phòng đợi hết thời gian, chưa đủ 8 người. Thoát phòng.";
+                        ? "Phòng đợi hủy do chưa đủ 4 người"
+                        : "Phòng đợi hết thời gian";
                 List<RoomUser> users = roomUserRepo.findByRoomId(lobby.getId());
                 for (RoomUser ru : users) {
                     webSocketTemplate.convertAndSendToUser(
@@ -178,7 +201,7 @@ public class MatchmakingServiceImpl implements MatchmakingService {
     }
 
     @Override
-    @Scheduled(fixedRate = 10000)
+    @Scheduled(fixedRate = 5000)
     @Transactional
     public void checkRoomTimeouts() {
         List<Room> activeRooms = roomRepo.findAllByStatus(RoomStatus.STARTED);
@@ -187,11 +210,12 @@ public class MatchmakingServiceImpl implements MatchmakingService {
             boolean allSubmitted = users.stream().allMatch(ru -> ru.getSubmissionId() != null);
             long minutesPassed = ChronoUnit.MINUTES.between(room.getStartedAt(), LocalDateTime.now());
 
-            if (allSubmitted || minutesPassed > 15) {
+            if (allSubmitted || minutesPassed >= 15) {
                 room.setStatus(RoomStatus.FINISHED);
                 room.setFinishedAt(LocalDateTime.now());
                 roomRepo.save(room);
                 updateLeaderboard(room.getId());
+                List<Notification> notifications = new ArrayList<>();
                 for (RoomUser ru : users) {
                     webSocketTemplate.convertAndSendToUser(
                             ru.getUserId(),
@@ -199,7 +223,24 @@ public class MatchmakingServiceImpl implements MatchmakingService {
                             new SocketMessage(SocketType.ROOM_END, "Phòng kết thúc! Room ID: " + room.getId(),
                                     new RoomEndResponse(room.getId(), ru.getRank()))
                     );
+
+                    webSocketTemplate.convertAndSendToUser(
+                            ru.getUserId(),
+                            "/topic/notification",
+                            new SocketMessage(SocketType.NEW_NOTIFICATION, "Thông báo mới",
+                                    null)
+                    );
+                    notifications.add(Notification.builder()
+                            .title("Trận đấu kết thúc")
+                            .type(NotificationTypeEnum.COMBAT)
+                            .message("Bạn đã đạt được thứ hạng #" + ru.getRank())
+                            .receiver(ru.getUserId())
+                            .status(NotificationStatusEnum.SEND)
+                            .build());
                 }
+                notificationRepository.saveAll(
+                    notifications
+                );
             }
         }
     }
@@ -208,22 +249,22 @@ public class MatchmakingServiceImpl implements MatchmakingService {
     @Transactional
     public void handleSubmission(String roomId, CreateSubmissionRequest submissionRequest) {
         String email = securityUtil.getCurrentUserLogin()
-                .orElseThrow(() -> new IllegalStateException("User not authenticated"));
+                .orElseThrow(() -> new BadRequestException("Người dùng chưa được xác thực"));
 
         Room room = roomRepo.findById(roomId)
-                .orElseThrow(() -> new IllegalStateException("Room not found"));
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy phòng"));
 
         if (!room.getStatus().equals(RoomStatus.STARTED)) {
-            throw new IllegalStateException("Room is not in STARTED status");
+            throw new BadRequestException("Phòng không ở trạng thái ĐÃ BẮT ĐẦU");
         }
         if (!submissionRequest.getPid().equals(room.getProblemId())) {
-            throw new IllegalStateException("Submission problem ID does not match room problem ID");
+            throw new BadRequestException("ID thử thách gửi không khớp với ID thử thách phòng");
         }
 
         RoomUser roomUser = roomUserRepo.findByRoomIdAndUserId(roomId, email)
-                .orElseThrow(() -> new IllegalStateException("User not in room"));
+                .orElseThrow(() -> new BadRequestException("Người dùng không có trong phòng"));
         if (roomUser.getSubmissionId() != null) {
-            throw new IllegalStateException("User has already submitted");
+            throw new BadRequestException("Người dùng đã gửi trước đó");
         }
 
         String submissionId = RandomStringUtil.generateRandomString(8);
@@ -235,7 +276,7 @@ public class MatchmakingServiceImpl implements MatchmakingService {
         webSocketTemplate.convertAndSendToUser(
                 email,
                 "/queue",
-                new SocketMessage(SocketType.STATUS, "Submission in progress:", null)
+                new SocketMessage(SocketType.SUBMIT_RESPONSE, "Bài nộp đang được chấm", null)
         );
 
         CodeRunnerResponse codeRunnerResponse = submissionService.run(submissionRequest, false);
@@ -250,39 +291,12 @@ public class MatchmakingServiceImpl implements MatchmakingService {
             webSocketTemplate.convertAndSendToUser(
                     ru.getUserId(),
                     "/queue",
-                    new SocketMessage(SocketType.STATUS, "Submission result: " + codeRunnerResponse.getStatus(),
+                    new SocketMessage(SocketType.SUBMIT_RESPONSE, "Kết quả chạy: " + codeRunnerResponse.getStatus(),
                             new SubmissionResponse(submissionId, codeRunnerResponse.getStatus(), codeRunnerResponse.getPassed()))
             );
         }
     }
 
-//    @RabbitListener(queues = "submission-result-queue")
-//    @Transactional
-//    public void processSubmissionResult(SubmissionUpdateRequest result) {
-//        Submission submission = submissionRepo.findById(result.getId())
-//                .orElseThrow(() -> new IllegalStateException("Submission not found"));
-//        submission.setStatus(result.getStatus());
-//        submission.setPassedTestCase(result.getPassedTestCase());
-//        submission.setTotalTestCases(result.getTotalTestCases());
-//        submission.setMessage(result.getMessage());
-//        submission.setMaxTime(result.getMaxTime());
-//        submissionRepo.save(submission);
-//
-//        Optional<RoomUser> roomUserOpt = roomUserRepo.findBySubmissionId(result.getId());
-//        if (roomUserOpt.isPresent()) {
-//            RoomUser roomUser = roomUserOpt.get();
-//            roomUser.setScore(submission.getPassedTestCase() != null ? submission.getPassedTestCase() : 0);
-//            roomUserRepo.save(roomUser);
-//            updateLeaderboard(roomUser.getRoomId());
-//
-//            webSocketTemplate.convertAndSendToUser(
-//                    roomUser.getUserId(),
-//                    "/queue",
-//                    new SocketMessage(SocketType.STATUS, "Submission result: " + submission.getStatus(),
-//                            new SubmissionResponse(submission.getId(), submission.getStatus(), submission.getPassedTestCase()))
-//            );
-//        }
-//    }
 
     @Override
     @Transactional
@@ -294,27 +308,36 @@ public class MatchmakingServiceImpl implements MatchmakingService {
             roomUserRepo.save(ru);
         }
 
+        List<LeaderboardEntry> leaderboardEntries = users.stream()
+                .map(u -> LeaderboardEntry.builder()
+                        .score(u.getScore())
+                        .username(u.getUserId())
+                        .rank(u.getRank())
+                        .build())
+                .toList();
+
+        LeaderboardResponse response = new LeaderboardResponse(leaderboardEntries);
+        SocketMessage message = new SocketMessage(SocketType.LEADERBOARD, "Leaderboard updated", response);
         for (RoomUser ru : users) {
             webSocketTemplate.convertAndSendToUser(
                     ru.getUserId(),
                     "/queue",
-                    new SocketMessage(SocketType.LEADERBOARD, "Leaderboard updated",
-                            new LeaderboardResponse(users.stream()
-                                    .map(u -> new LeaderboardEntry(u.getUserId(), u.getRank(), u.getScore()))
-                                    .toList()))
+                    message
             );
         }
     }
 }
 
+@Builder
 @Getter
 @AllArgsConstructor
 class RoomJoinResponse {
     private String roomId;
     private RoomStatus status;
-    private Integer problemId;
+    private ProblemResponse problem;
 }
 
+@Builder
 @Getter
 @AllArgsConstructor
 class SubmissionResponse {
@@ -322,32 +345,39 @@ class SubmissionResponse {
     private String status;
     private Integer passedTestCase;
 }
+
+
+@Builder
 @Getter
 @AllArgsConstructor
 class UserJoinResponse {
-    private String userId;
+    private String username;
 }
 
 @Getter
+@Builder
 @AllArgsConstructor
 class UserListResponse {
-    private List<String> userIds;
+    private List<String> usernames;
 }
 
+@Builder
 @Getter
 @AllArgsConstructor
 class LeaderboardEntry {
-    private String userId;
+    private String username;
     private Integer rank;
     private Integer score;
 }
 
+@Builder
 @Getter
 @AllArgsConstructor
 class LeaderboardResponse {
     private List<LeaderboardEntry> leaderboard;
 }
 
+@Builder
 @Getter
 @AllArgsConstructor
 class RoomEndResponse {

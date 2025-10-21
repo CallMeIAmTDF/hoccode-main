@@ -89,6 +89,15 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
+    @Override
+    public void sendEmailPlagiarism(NotificationEvent message) {
+        try {
+            putPropsDataMail(convertDataMail(message, urlNoticeStreak), "plagiarism_noti");
+        } catch (MessagingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private DataMailDto convertDataMail(NotificationEvent message, String urlBase) throws MessagingException {
         Map<String, Object> props = message.getParam().entrySet().stream()
                 .filter(entry -> !"code".equals(entry.getKey()))

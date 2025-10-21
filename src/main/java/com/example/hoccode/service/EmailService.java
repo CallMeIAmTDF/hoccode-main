@@ -12,4 +12,6 @@ public interface EmailService {
     void sendEmailHappyBirthday(NotificationEvent message);
 
     void sendEmailStreaks(NotificationEvent message);
+
+    void sendEmailPlagiarism(NotificationEvent message);
 }

@@ -52,7 +52,7 @@ public class ProblemService implements IProblemService {
     public Problem create(CreateProblemRequest createProblemRequest, boolean isContest) {
         if(!isContest){
             if(!securityUtil.isAdmin()){
-                throw new BadRequestException("Only for admin");
+                throw new BadRequestException("Chỉ dành cho quản trị viên");
             }
         }
 
@@ -144,15 +144,15 @@ public class ProblemService implements IProblemService {
     @Transactional
     public ProblemResponse update(Integer id, UpdateProblemRequest request) throws IdInvalidException {
         Problem problem = problemRepository.findByIdAndDeletedFalse(id)
-                .orElseThrow(() -> new IdInvalidException("Problem not found"));
+                .orElseThrow(() -> new IdInvalidException("Không tìm thấy thử thách"));
 
         if(problem.getIsContestProblem()){
             if(!problem.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get())){
-                throw new BadRequestException("Can't access this resource");
+                throw new BadRequestException("Không thể truy cập tài nguyên này");
             }
         }else{
             if(!securityUtil.isAdmin()){
-                throw new BadRequestException("Can't access this resource");
+                throw new BadRequestException("Chỉ dành cho quản trị viên");
             }
         }
         if (request.getTitle() != null) problem.setTitle(request.getTitle());

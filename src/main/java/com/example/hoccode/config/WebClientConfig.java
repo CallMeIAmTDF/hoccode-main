@@ -15,13 +15,11 @@ import reactor.netty.http.client.HttpClient;
 @Configuration
 public class WebClientConfig {
     @Bean
-    public WebClient gptWebClient(@Value("${gpt-api.protocol}") String protocol,
-                                  @Value("${gpt-api.host}") String host,
-                                  @Value("${gpt-api.port}") int port) {
-
+    public WebClient plagiarismClient(@Value("${plagiarism-api.protocol}") String protocol,
+                                  @Value("${plagiarism-api.host}") String host,
+                                  @Value("${plagiarism-api.port}") int port) {
         HttpClient httpClient = HttpClient.create()
                 .protocol(HttpProtocol.HTTP11);
-
         return WebClient.builder()
                 .baseUrl(protocol + "://" + host + ":" + port)
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
@@ -36,4 +34,26 @@ public class WebClientConfig {
                 .defaultHeader(HttpHeaders.USER_AGENT, "SpringBoot-WebClient")
                 .build();
     }
+
+
+//    @Bean
+//    public WebClient gptClient(@Value("${gpt-api.protocol}") String protocol,
+//                                      @Value("${gpt-api.host}") String host,
+//                                      @Value("${gpt-api.port}") int port) {
+//        HttpClient httpClient = HttpClient.create()
+//                .protocol(HttpProtocol.HTTP11);
+//        return WebClient.builder()
+//                .baseUrl(protocol + "://" + host + ":" + port)
+//                .clientConnector(new ReactorClientHttpConnector(httpClient))
+//                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+//                .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+//                .exchangeStrategies(ExchangeStrategies.builder()
+//                        .codecs(configurer -> {
+//                            configurer.defaultCodecs().maxInMemorySize(50 * 1024 * 1024);
+//                            configurer.defaultCodecs().enableLoggingRequestDetails(true);
+//                        })
+//                        .build())
+//                .defaultHeader(HttpHeaders.USER_AGENT, "SpringBoot-WebClient")
+//                .build();
+//    }
 }
