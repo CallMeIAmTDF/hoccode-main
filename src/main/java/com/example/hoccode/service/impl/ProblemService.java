@@ -225,7 +225,7 @@ public class ProblemService implements IProblemService {
     public ProblemResponse problemDetail(Integer id) {
         Problem problem = problemRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new BadRequestException("Problem not found"));
         if(problem.getIsContestProblem()){
-            throw new BadRequestException("Contest problem");
+            throw new BadRequestException("Thử thách cuộc thi");
         }
         return getAProblem(problem);
     }
@@ -234,10 +234,10 @@ public class ProblemService implements IProblemService {
     public ProblemResponse problemDetailForContest(Integer id, Integer contestId) {
         Problem problem = problemRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new BadRequestException("Problem not found"));
         if(!problem.getIsContestProblem()){
-            throw new BadRequestException("Not a contest problem");
+            throw new BadRequestException("Không phải là thử thách của cuộc thi");
         }
         if(!Objects.equals(problem.getContestProblem().getContest().getId(), contestId)){
-            throw new BadRequestException("Not a contest problem of this contest");
+            throw new BadRequestException("Không phải là thử thách của cuộc thi này");
         }
         return getAProblem(problem);
     }
@@ -284,7 +284,7 @@ public class ProblemService implements IProblemService {
     @Override
     public Problem updateAllowedFields(Integer problemId, UpdateContestProblemRequest req) {
         Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new BadRequestException("Problem not found with id: " + problemId));
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy thử thách với id:" + problemId));
 
         problem.getHints().clear();
         problem.getTestCases().clear();

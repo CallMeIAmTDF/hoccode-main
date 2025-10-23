@@ -79,13 +79,13 @@ public class ContestService implements IContestService {
     @Override
     public Contest updateContest(Integer contestId, UpdateContestRequest request) throws IdInvalidException {
         Contest contest = contestRepository.findFirstByIdAndDeletedFalse(contestId)
-                .orElseThrow(() -> new BadRequestException("Contest not found with id: " + contestId));
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy cuộc thi có id: " + contestId));
 
         if(!contest.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get()))
-            throw new BadRequestException("Access Denied");
+            throw new BadRequestException("Truy cập bị từ chối");
 
         if(request.getNumAttendees() != null && contest.getParticipants().size() > request.getNumAttendees()){
-            throw new BadRequestException("Cannot decrease number of attendees");
+            throw new BadRequestException("Không thể giảm số lượng người tham dự");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -124,7 +124,7 @@ public class ContestService implements IContestService {
                     }
                 } else {
                     if (contestStarted) {
-                        throw new BadRequestException("Cannot add new problem after contest started");
+                        throw new BadRequestException("Không thể thêm thử thách mới sau khi cuộc thi bắt đầu");
                     }
                     Problem newProblem = problemService.create(
                             problemMapper.toCreateProblemRequest(problemReq), true);
@@ -153,7 +153,7 @@ public class ContestService implements IContestService {
     @Override
     public ContestDetailResponse getContestDetail(Integer contestId) {
         Contest contest = contestRepository.findFirstByIdAndDeletedFalse(contestId)
-                .orElseThrow(() -> new BadRequestException("Contest not found with id: " + contestId));
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy cuộc thi có id: " + contestId));
 
         if (LocalDateTime.now().isBefore(contest.getStartTime())) {
             contest.setContestProblems(List.of());
@@ -199,10 +199,10 @@ public class ContestService implements IContestService {
     @Override
     public ContestDetailResponse edit(Integer contestId) {
         Contest contest = contestRepository.findFirstByIdAndDeletedFalse(contestId)
-                .orElseThrow(() -> new BadRequestException("Contest not found with id: " + contestId));
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy cuộc thi có id: " + contestId));
 
         if(!contest.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get()))
-            throw new BadRequestException("Access Denied");
+            throw new BadRequestException("Truy cập bị từ chối");
 
         return contestMapper.toContestDetailResponse(contest);
     }
@@ -212,30 +212,30 @@ public class ContestService implements IContestService {
         String email = securityUtil.getCurrentUserLogin().get();
 
         Contest contest = contestRepository.findFirstByIdAndDeletedFalse(contestId)
-                .orElseThrow(() -> new BadRequestException("Contest not found"));
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy cuộc thi"));
 
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new BadRequestException("User not found"));
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy người dùng"));
 
         if (contestParticipantRepository.existsByContestIdAndUserId(contestId, user.getId())) {
-            throw new BadRequestException("You have already joined this contest");
+            throw new BadRequestException("Bạn đã tham gia cuộc thi này");
         }
 
         long currentParticipants = contestParticipantRepository.countByContestId(contestId);
         if (currentParticipants >= contest.getNumAttendees()) {
-            throw new BadRequestException("Contest has reached maximum number of participants");
+            throw new BadRequestException("Cuộc thi đã đạt đến số lượng người tham gia tối đa");
         }
 
         if (StringUtils.hasText(contest.getPassword())) {
             if (!StringUtils.hasText(password) || !contest.getPassword().equals(password)) {
-                throw new BadRequestException("Invalid contest password");
+                throw new BadRequestException("Mật khẩu cuộc thi không hợp lệ");
             }
         }
 
         LocalDateTime now = LocalDateTime.now();
         if (contest.getEndTime().isBefore(now)) {
-            throw new BadRequestException("Contest has already ended");
+            throw new BadRequestException("Cuộc thi đã kết thúc");
         }
 
         ContestParticipant participant = ContestParticipant.builder()
@@ -251,9 +251,9 @@ public class ContestService implements IContestService {
     public void unjoinContest(Integer contestId) {
         String email = securityUtil.getCurrentUserLogin().get();
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new BadRequestException("User not found"));
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy người dùng"));
         if (!contestParticipantRepository.existsByContestIdAndUserId(contestId, user.getId())) {
-            throw new BadRequestException("You haven't joined this contest");
+            throw new BadRequestException("Bạn chưa tham gia cuộc thi này");
         }
         contestParticipantRepository.deleteByContestIdAndUserId(contestId, user.getId());
     }
@@ -268,23 +268,23 @@ public class ContestService implements IContestService {
     public ProblemResponse problemDetailForContest(Integer id, Integer contestId) {
         Contest contest = contestRepository.findFirstById(contestId);
         if(contest == null)
-            throw new BadRequestException("Contest not found");
+            throw new BadRequestException("Không tìm thấy cuộc thi");
 
         LocalDateTime now = LocalDateTime.now();
 
         if (now.isBefore(contest.getStartTime())) {
-            throw new BadRequestException("Contest has not started yet");
+            throw new BadRequestException("Cuộc thi vẫn chưa bắt đầu");
         }
 
         if (now.isAfter(contest.getEndTime())) {
-            throw new BadRequestException("Contest has already ended");
+            throw new BadRequestException("Cuộc thi đã kết thúc");
         }
 
         User user = userRepository.findByEmail(securityUtil.getCurrentUserLogin().get())
-                .orElseThrow(() -> new BadRequestException("User not found"));
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy người dùng"));
 
         if(!contestParticipantRepository.existsByContestIdAndUserId(contestId, user.getId())){
-            throw new BadRequestException("You haven't joined this contest");
+            throw new BadRequestException("Bạn chưa tham gia cuộc thi này");
         }
 
         return problemService.problemDetailForContest(id, contestId);
@@ -293,7 +293,7 @@ public class ContestService implements IContestService {
     @Override
     public boolean isEditable(Integer contestId){
         Contest contest = contestRepository.findFirstByIdAndDeletedFalse(contestId)
-                .orElseThrow(() -> new BadRequestException("Contest not found with id: " + contestId));
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy cuộc thi có id:" + contestId));
 
         if(!contest.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get()))
             return false;
@@ -321,11 +321,11 @@ public class ContestService implements IContestService {
     public Map<String, Object> getContestStats(Integer contestId){
         Contest contest = contestRepository.findFirstById(contestId);
         if(contest == null){
-            throw new BadRequestException("Contest not found with id: " + contestId);
+            throw new BadRequestException("Không tìm thấy cuộc thi có id: " + contestId);
         }
 
         if(!contest.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get())){
-            throw new BadRequestException("Access Denied");
+            throw new BadRequestException("Truy cập bị từ chối");
         }
 
         Map<String, Object> stats = new HashMap<>();
@@ -362,11 +362,11 @@ public class ContestService implements IContestService {
     public List<String> getAllContestParticipant(Integer contestId){
         Contest contest = contestRepository.findFirstById(contestId);
         if(contest == null){
-            throw new BadRequestException("Contest not found with id: " + contestId);
+            throw new BadRequestException("Không tìm thấy cuộc thi có id:" + contestId);
         }
 
         if(!contest.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get())){
-            throw new BadRequestException("Access Denied");
+            throw new BadRequestException("Truy cập bị từ chối");
         }
 
         List<ContestParticipant> cp = contestParticipantRepository.findByContest(contest);

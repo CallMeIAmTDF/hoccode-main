@@ -48,7 +48,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
             var user = userRepository
                     .findFirstByEmailAndActiveAndIsLocked(request.getEmail(), true, false)
-                    .orElseThrow(() -> new BadRequestException("User not found or inactive or locked"));
+                    .orElseThrow(() -> new BadRequestException("Người dùng không tìm thấy hoặc không hoạt động hoặc bị khóa"));
 
             return createAuthenticationResponse(user);
 

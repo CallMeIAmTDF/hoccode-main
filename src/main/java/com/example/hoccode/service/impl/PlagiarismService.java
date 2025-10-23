@@ -62,11 +62,11 @@ public class PlagiarismService implements IPlagiarismService {
     public List<PlagiarismDetailResponse> plagiarismChecking(Integer contestId) throws JsonProcessingException {
         Contest contest = contestRepository.findFirstById(contestId);
         if(contest == null){
-            throw new BadRequestException("Contest not found with id: " + contestId);
+            throw new BadRequestException("Không tìm thấy cuộc thi có id:" + contestId);
         }
 
         if(!contest.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get())){
-            throw new BadRequestException("Access Denied");
+            throw new BadRequestException("Truy cập bị từ chối");
         }
 
         Plagiarism plagiarism = plagiarismRepository.findFirstByCid(contestId);
@@ -139,8 +139,6 @@ public class PlagiarismService implements IPlagiarismService {
                 plagiarism.setStatus(PlagiarismStatus.SUCCESS);
                 plagiarismRepository.save(plagiarism);
 
-//                System.out.println("Plagiarism checked " + plagiarism.getCreatedBy());
-
                 messagingTemplate.convertAndSendToUser(
                         plagiarism.getCreatedBy(),
                         "/queue",
@@ -165,10 +163,9 @@ public class PlagiarismService implements IPlagiarismService {
                         .body("Kết quả kiểm tra gian lận!!!")
                         .build();
                 kafkaTemplate.send("plagiarism", notificationEvent);
-
             }
             else{
-                throw new BadRequestException("Plagiarism already checked");
+                throw new BadRequestException("Đã kiểm tra đạo văn trước đó");
             }
         }
         else{

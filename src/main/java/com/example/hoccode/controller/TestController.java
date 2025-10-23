@@ -1,7 +1,9 @@
 package com.example.hoccode.controller;
 
+import com.example.hoccode.dto.request.create.CreateNotificationRequest;
 import com.example.hoccode.repository.SubmissionRepository;
 import com.example.hoccode.service.IContestService;
+import com.example.hoccode.service.INotificationService;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -50,8 +52,18 @@ public class TestController {
 //        return submissionRepository.countAcceptedByCategory();
 //    }
 
+    INotificationService notificationService;
+
     @GetMapping("/{contestId}")
     public Map<String, Object> getContestStats(@PathVariable Integer contestId){
         return contestService.getContestStats(contestId);
+    }
+
+    @GetMapping("")
+    public void test(){
+        notificationService.create(CreateNotificationRequest.builder()
+                .content("123131213")
+                .title("Hello")
+                .build());
     }
 }

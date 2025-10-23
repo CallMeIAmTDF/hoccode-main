@@ -49,7 +49,6 @@ public class StreakService implements IStreakService {
                 streak.setMaxStreak(streak.getCurrentStreak());
             }
         }else{
-            System.out.println("Streak not found");
             streak = Streak.builder()
                     .user(u)
                     .maxStreak(1)

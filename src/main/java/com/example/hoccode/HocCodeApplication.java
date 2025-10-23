@@ -1,6 +1,9 @@
 package com.example.hoccode;
 
+import com.example.hoccode.dto.request.create.CreateNotificationRequest;
+import com.example.hoccode.service.INotificationService;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
@@ -12,11 +15,14 @@ import java.util.TimeZone;
 @EnableScheduling
 @EnableJpaAuditing(auditorAwareRef = "auditAwareImpl")
 public class HocCodeApplication {
+
+
 	public static void main(String[] args) {
 		SpringApplication.run(HocCodeApplication.class, args);
 	}
 	@PostConstruct
 	public void init(){
 		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+
 	}
 }

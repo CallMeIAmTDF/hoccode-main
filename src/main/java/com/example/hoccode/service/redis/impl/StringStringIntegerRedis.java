@@ -25,4 +25,14 @@ public class StringStringIntegerRedis extends BaseRedisServiceImplV2<String, Str
         this.hashSet("daily", LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE), i);
     }
 
+    @Override
+    public void saveReadStatus(String email, String noti) {
+        this.hashSet("view_noti", email+":"+noti, 1);
+    }
+
+    @Override
+    public boolean isRead(String email, String noti) {
+        return this.hashExist("view_noti", email + ":" + noti);
+    }
+
 }

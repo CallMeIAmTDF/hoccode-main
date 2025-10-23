@@ -68,7 +68,7 @@ public class SubmissionService implements ISubmissionService {
             Contest contest = p.getContestProblem().getContest();
             // user khong thuoc contest
             if(!contestParticipantRepository.existsByContestIdAndUserId(contest.getId(), user.getId())){
-                throw new BadRequestException("You are not in this contest");
+                throw new BadRequestException("Bạn không tham gia cuộc thi này");
             }
 
             // submit qua thoi gian
@@ -77,11 +77,11 @@ public class SubmissionService implements ISubmissionService {
             LocalDateTime now = LocalDateTime.now();
 
             if (now.isBefore(contest.getStartTime())) {
-                throw new BadRequestException("Contest has not started yet");
+                throw new BadRequestException("Cuộc thi vẫn chưa bắt đầu");
             }
 
             if (now.isAfter(contest.getEndTime())) {
-                throw new BadRequestException("Contest has already ended");
+                throw new BadRequestException("Cuộc thi đã kết thúc");
             }
 
         }
@@ -104,7 +104,7 @@ public class SubmissionService implements ISubmissionService {
     @Override
     public Map<String, Object> viewResults(String submissionId) {
         Submission submission = submissionRepository.findById(submissionId).orElseThrow(
-                () -> new BadRequestException("SubmissionId not found")
+                () -> new BadRequestException("Không tìm thấy SubmitId")
         );
         if(!submission.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get())){
             throw new BadRequestException("Insufficient access");
@@ -118,7 +118,7 @@ public class SubmissionService implements ISubmissionService {
     @Override
     public Submission view(String submissionId) {
         Submission submission = submissionRepository.findById(submissionId).orElseThrow(
-                () -> new BadRequestException("SubmissionId not found")
+                () -> new BadRequestException("Không tìm thấy SubmitId")
         );
         if(!submission.getCreatedBy().equals(securityUtil.getCurrentUserLogin().get())){
             throw new BadRequestException("Insufficient access");
@@ -129,7 +129,7 @@ public class SubmissionService implements ISubmissionService {
     @Override
     public void handleCallBack(SubmissionUpdateRequest request) {
         Submission submission = submissionRepository.findById(request.getId()).orElseThrow(
-                () -> new BadRequestException("SubmissionId not found")
+                () -> new BadRequestException("Không tìm thấy SubmitId")
         );
 
         System.out.println("submissionId: " + submission.getId());
@@ -170,7 +170,7 @@ public class SubmissionService implements ISubmissionService {
     @Override
     public ContestLeaderboardResponse getContestLeaderboard(Integer contestId, int page, int size) {
         Contest contest = contestRepository.findFirstByIdAndDeletedFalse(contestId)
-                .orElseThrow(() -> new BadRequestException("Contest not found"));
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy cuộc thi"));
 
 //        Pageable pageable = PageRequest.of(page, size);
 //        Page<IContestLeaderboardProjection> leaderboardPage =

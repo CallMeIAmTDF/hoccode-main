@@ -1,17 +1,16 @@
 package com.example.hoccode.controller;
 
 import com.example.hoccode.dto.ApiResponse;
+import com.example.hoccode.dto.request.create.CreateNotificationRequest;
 import com.example.hoccode.entity.Notification;
 import com.example.hoccode.service.INotificationService;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
@@ -41,6 +40,17 @@ public class UserNotificationController {
                 .code(HttpStatus.OK.value())
                 .message("Read Notification")
                 .data(null)
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
+    @PostMapping("")
+    public ResponseEntity<ApiResponse<Notification>> create(@RequestBody CreateNotificationRequest request) {
+        ApiResponse<Notification> apiResponse = ApiResponse.<Notification>builder()
+                .code(HttpStatus.OK.value())
+                .message("Create Notification")
+                .data(notificationService.create(request))
                 .build();
         return ResponseEntity.ok()
                 .body(apiResponse);

@@ -8,4 +8,8 @@ public interface IStringStringIntegerRedis extends BaseRedisServiceV2<String, St
     Integer getDailyChallenge();
 
     void setDailyChallenge(Integer i);
+
+    void saveReadStatus(String email, String noti);
+
+    boolean isRead(String email, String noti);
 }
