@@ -58,7 +58,7 @@ code-runner-api:
 gpt-api:
   protocol: ${GPT_API_PROTOCOL:http}
   host: ${GPT_API_HOST:localhost}
-  port: ${GPT_API_PORT:1111}
+  port: ${GPT_API_PORT:8000}
 
 plagiarism-api:
   protocol: ${PLAGIARISM_API_PROTOCOL:http}

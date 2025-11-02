@@ -54,7 +54,7 @@ public class SubmissionService implements ISubmissionService {
     IStreakService streakService;
     ContestRepository contestRepository;
     ContestParticipantRepository contestParticipantRepository;
-
+    Integer ZERO = 0;
 
     @Override
     @Transactional
@@ -200,7 +200,7 @@ public class SubmissionService implements ISubmissionService {
                                 .stream()
                                 .map(status -> ContestProblemStatusResponse.builder()
                                         .problemName(status.getProblemName())
-                                        .status(status.getAcceptedCount() != null ? "ACCEPTED" : "UNACCEPTED")
+                                        .status(!ZERO.equals(status.getAcceptedCount()) ? "ACCEPTED" : "UNACCEPTED")
                                         .acceptedCount(status.getAcceptedCount() != null ? status.getAcceptedCount() : 0)
                                         .wrongCount(status.getWrongCount() != null ? status.getWrongCount() : 0)
                                         .build())

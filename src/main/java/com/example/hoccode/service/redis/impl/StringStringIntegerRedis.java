@@ -1,6 +1,5 @@
 package com.example.hoccode.service.redis.impl;
 
-import com.example.hoccode.service.base.BaseRedisServiceV2;
 import com.example.hoccode.service.base.impl.BaseRedisServiceImplV2;
 import com.example.hoccode.service.redis.IStringStringIntegerRedis;
 import org.springframework.data.redis.core.HashOperations;
@@ -35,4 +34,13 @@ public class StringStringIntegerRedis extends BaseRedisServiceImplV2<String, Str
         return this.hashExist("view_noti", email + ":" + noti);
     }
 
+    @Override
+    public boolean isUserViewedDiscussion(String email, Integer discussionId){
+        return this.hashExist("view_discussion", email + ":" + discussionId);
+    }
+
+    @Override
+    public void saveUserViewedDiscussion(String email, Integer discussionId){
+        this.hashSet("view_discussion", email + ":" + discussionId, 1);
+    }
 }

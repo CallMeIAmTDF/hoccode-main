@@ -20,16 +20,18 @@ public class Discussion extends BaseEntity{
     Integer id;
 
     String title;
+
+    @Column(columnDefinition = "LONGTEXT")
     String description;
 
     Integer pid;
 
     @Column(name = "is_delete")
-    Boolean isDelete;
+    Boolean delete;
 
     Integer view;
 
-    void incrementView(){
+    public void incrementView(){
         this.view++;
     }
 }

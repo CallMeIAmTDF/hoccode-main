@@ -16,6 +16,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.Set;
 import java.util.List;
 
@@ -299,4 +300,46 @@ public interface SubmissionRepository extends JpaRepository<Submission, String> 
             nativeQuery = true
     )
     List<SubmissionWithProblemTitleProjection> findFirstAcceptedSubmissionsWithProblemTitle(@Param("contestId") Integer contestId);
+
+    @Query("SELECT DISTINCT s.createdBy FROM Submission s")
+    List<String> findDistinctCreatedBy();
+
+
+    @Query(value = """
+        SELECT * FROM submissions s
+        WHERE s.created_by = :user
+          AND s.pid = :pid
+          AND s.created_at > (
+              SELECT COALESCE(
+                  (
+                      SELECT s2.created_at
+                      FROM submissions s2
+                      WHERE s2.created_by = :user
+                        AND s2.pid = :pid
+                        AND s2.status = 'ACCEPTED'
+                      ORDER BY s2.created_at DESC
+                      LIMIT 1 OFFSET 1
+                  ),
+                  '1970-01-01 00:00:00'
+              )
+          )
+          AND s.created_at <= (
+              SELECT s3.created_at
+              FROM submissions s3
+              WHERE s3.created_by = :user
+                AND s3.pid = :pid
+                AND s3.status = 'ACCEPTED'
+              ORDER BY s3.created_at DESC
+              LIMIT 1
+          )
+        ORDER BY s.created_at ASC
+        """, nativeQuery = true)
+    List<Submission> findRecentSubmissionsBetweenLastTwoAccepted(
+            @Param("user") String user,
+            @Param("pid") Integer pid
+    );
+
+    Optional<Submission> findFirstById(String id);
+
+    Optional<Submission> findTopByCreatedByAndPidOrderByCreatedAtDesc(String createdBy, Integer pid);
 }

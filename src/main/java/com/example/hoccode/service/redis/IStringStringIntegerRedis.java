@@ -12,4 +12,8 @@ public interface IStringStringIntegerRedis extends BaseRedisServiceV2<String, St
     void saveReadStatus(String email, String noti);
 
     boolean isRead(String email, String noti);
+
+    boolean isUserViewedDiscussion(String email, Integer discussionId);
+
+    void saveUserViewedDiscussion(String email, Integer discussionId);
 }

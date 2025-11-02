@@ -16,6 +16,7 @@ import com.example.hoccode.util.constant.PlagiarismStatus;
 import com.example.hoccode.util.constant.SocketType;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -59,6 +60,7 @@ public class PlagiarismService implements IPlagiarismService {
     String urlNoticePlagiarism;
 
     @Override
+    @Transactional
     public List<PlagiarismDetailResponse> plagiarismChecking(Integer contestId) throws JsonProcessingException {
         Contest contest = contestRepository.findFirstById(contestId);
         if(contest == null){
@@ -117,6 +119,7 @@ public class PlagiarismService implements IPlagiarismService {
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(Void.class)
+                    .doOnError(e -> log.error("Error when calling API: " + e.getMessage()))
                     .subscribe();
 
             // Lưu lịch sử
