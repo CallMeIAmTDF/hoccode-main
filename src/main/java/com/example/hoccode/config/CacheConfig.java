@@ -22,6 +22,10 @@ public class CacheConfig {
                         .expireAfterWrite(10, TimeUnit.MINUTES)
                         .maximumSize(1000)
                         .build()),
+                new CaffeineCache("hourlyCache", Caffeine.newBuilder()
+                        .expireAfterWrite(1, TimeUnit.HOURS)
+                        .maximumSize(1000)
+                        .build()),
                 new CaffeineCache("dailyCache", Caffeine.newBuilder()
                         .expireAfterWrite(1, TimeUnit.DAYS)
                         .maximumSize(1000)

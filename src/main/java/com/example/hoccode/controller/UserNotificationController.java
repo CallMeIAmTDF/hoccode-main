@@ -1,25 +1,22 @@
 package com.example.hoccode.controller;
 
 import com.example.hoccode.dto.ApiResponse;
-import com.example.hoccode.dto.request.create.CreateNotificationRequest;
 import com.example.hoccode.entity.Notification;
 import com.example.hoccode.service.INotificationService;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/notifications")
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-public class UserNotificationController {
+public class   UserNotificationController {
     INotificationService notificationService;
 
     @GetMapping("")
@@ -45,14 +42,7 @@ public class UserNotificationController {
                 .body(apiResponse);
     }
 
-    @PostMapping("")
-    public ResponseEntity<ApiResponse<Notification>> create(@RequestBody CreateNotificationRequest request) {
-        ApiResponse<Notification> apiResponse = ApiResponse.<Notification>builder()
-                .code(HttpStatus.OK.value())
-                .message("Create Notification")
-                .data(notificationService.create(request))
-                .build();
-        return ResponseEntity.ok()
-                .body(apiResponse);
-    }
+
+
+
 }

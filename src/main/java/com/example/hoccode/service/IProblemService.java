@@ -5,6 +5,7 @@ import com.example.hoccode.dto.request.ProblemSearchRequest;
 import com.example.hoccode.dto.request.create.CreateProblemRequest;
 import com.example.hoccode.dto.request.update.UpdateContestProblemRequest;
 import com.example.hoccode.dto.request.update.UpdateProblemRequest;
+import com.example.hoccode.dto.response.AdminProblemResponse;
 import com.example.hoccode.dto.response.CategoryCountResponse;
 import com.example.hoccode.dto.response.ProblemResponse;
 import com.example.hoccode.entity.Problem;
@@ -19,6 +20,8 @@ public interface IProblemService {
 
     //    List<ProblemResponse> getAll();
     Page<ProblemResponse> getAll(ProblemSearchRequest request);
+
+    List<AdminProblemResponse> getProblemForAdmin();
 
     ProblemResponse update(Integer id, UpdateProblemRequest updateProblemRequest) throws IdInvalidException;
 
@@ -35,4 +38,6 @@ public interface IProblemService {
     Map<String, Map<Integer, Long>> getProblemStats(List<Integer> problemIds);
 
     Problem updateAllowedFields(Integer problemId, UpdateContestProblemRequest req);
+
+    String deleteProblem(Integer id);
 }

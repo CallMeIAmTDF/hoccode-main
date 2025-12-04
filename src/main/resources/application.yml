@@ -82,4 +82,12 @@ api:
     noti-streak: "/learn"
     noti-plagiarism: "/profile/contest/"
 
+app:
+  rate-limit:
+    enforced-endpoints:
+      POST /submission: submission-post-limit
+      POST /chat: chat-post-limit
+      GET /api/v1/expensive-query: expensive-query-limit
+      GET /test: test
+
 

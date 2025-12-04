@@ -16,4 +16,8 @@ public interface IStringStringIntegerRedis extends BaseRedisServiceV2<String, St
     boolean isUserViewedDiscussion(String email, Integer discussionId);
 
     void saveUserViewedDiscussion(String email, Integer discussionId);
+
+    boolean isRoomExist(String roomId);
+
+    void saveRoom(String roomId);
 }

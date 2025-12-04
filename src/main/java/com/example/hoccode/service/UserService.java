@@ -83,4 +83,8 @@ public interface UserService {
     List<UserPointResponse> getLeaderBoard();
 
     Map<String, Object> getUserStats();
+
+    List<UserResponse> getAllUsers();
+
+    void lock(String userId);
 }

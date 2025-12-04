@@ -5,13 +5,16 @@ import com.example.hoccode.dto.request.update.UpdateContestProblemRequest;
 import com.example.hoccode.dto.request.update.UpdateHintRequest;
 import com.example.hoccode.dto.request.update.UpdateProblemRequest;
 import com.example.hoccode.dto.request.update.UpdateTestcaseRequest;
+import com.example.hoccode.dto.response.AdminProblemResponse;
 import com.example.hoccode.dto.response.ProblemResponse;
 import com.example.hoccode.entity.Problem;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -102,5 +105,14 @@ public class ProblemMapper {
                 )
                 .point(request.getPoint())
                 .build();
+    }
+
+    public AdminProblemResponse toAdminProblemResponse(Problem problem){
+        ProblemResponse base = toProblemResponse(problem, false, new HashSet<>());
+
+        AdminProblemResponse admin = new AdminProblemResponse();
+        BeanUtils.copyProperties(base, admin);
+        admin.setDeleted(problem.getDeleted());
+        return admin;
     }
 }

@@ -306,4 +306,16 @@ public class UserServiceImpl implements UserService {
         userStats.put("point", currentUser.getPoint());
         return userStats;
     }
+
+    @Override
+    public List<UserResponse> getAllUsers(){
+        return userRepository.findAllOrderByLocked().stream().map(userMapper::toUserResponse).toList();
+    }
+
+    @Override
+    public void lock(String userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new BadRequestException("Người dùng không tồn tại"));
+        user.setIsLocked(!user.getIsLocked());
+        userRepository.save(user);
+    }
 }

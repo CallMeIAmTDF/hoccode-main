@@ -8,6 +8,7 @@ import com.example.hoccode.dto.request.ProblemSearchRequest;
 import com.example.hoccode.dto.request.create.CreateProblemRequest;
 import com.example.hoccode.dto.request.update.UpdateContestProblemRequest;
 import com.example.hoccode.dto.request.update.UpdateProblemRequest;
+import com.example.hoccode.dto.response.AdminProblemResponse;
 import com.example.hoccode.dto.response.CategoryCountResponse;
 import com.example.hoccode.dto.response.ProblemResponse;
 import com.example.hoccode.entity.Hint;
@@ -86,6 +87,8 @@ public class ProblemService implements IProblemService {
             testCases = createProblemRequest.getTestCases().stream().map(
                     testCase -> TestCase.builder().problem(problem).expectedOutput(testCase.getExpectedOutput()).input(testCase.getInput()).isHidden(testCase.getIsHidden()).build()
             ).collect(Collectors.toList());
+        }else{
+            throw new BadRequestException("Testcase không được trống");
         }
         problem.setAllTestCases(testCases);
 
@@ -141,6 +144,23 @@ public class ProblemService implements IProblemService {
     }
 
     @Override
+    public List<AdminProblemResponse> getProblemForAdmin(){
+        Set<Integer> fakeSet = new HashSet<>();
+        List<Problem> problems = problemRepository.findAll();
+        List<Integer> problemIds = problems.stream().map(Problem::getId).toList();
+        Map<String, Map<Integer, Long>> stats = getProblemStats(problemIds);
+        Map<Integer, Long> passCountMap = stats.get("pass");
+        Map<Integer, Long> failCountMap = stats.get("fail");
+
+        return problems.stream().filter(p -> !p.getIsContestProblem()).map(p -> {
+            AdminProblemResponse response = problemMapper.toAdminProblemResponse(p);
+            response.setPassCount(passCountMap.getOrDefault(p.getId(), 0L));
+            response.setFailCount(failCountMap.getOrDefault(p.getId(), 0L));
+            return response;
+        }).toList();
+    }
+
+    @Override
     @Transactional
     public ProblemResponse update(Integer id, UpdateProblemRequest request) throws IdInvalidException {
         Problem problem = problemRepository.findByIdAndDeletedFalse(id)
@@ -164,6 +184,8 @@ public class ProblemService implements IProblemService {
         if (request.getDifficulty() != null) problem.setDifficulty(request.getDifficulty());
         if (request.getPoint() != null) problem.setPoint(request.getPoint());
         if (request.getIsContestProblem() != null) problem.setIsContestProblem(request.getIsContestProblem());
+        if (request.getCategories() != null) problem.setCategories(request.getCategories());
+//        if (request.get)
         if (request.getTestCases() != null) {
             testCaseRepository.deleteAllByProblemId(problem.getId());
             List<TestCase> newTestCases = request.getTestCases().stream()
@@ -300,5 +322,20 @@ public class ProblemService implements IProblemService {
         }
 
         return problemRepository.save(problem);
+    }
+
+
+    @Override
+    public String deleteProblem(Integer id){
+        if(!securityUtil.isAdmin()){
+            throw new BadRequestException("Không có quyền truy cập");
+        }
+
+        Problem problem = problemRepository.findFirstById(id).orElseThrow(() -> new BadRequestException("Thử thách không tồn tại"));
+        boolean status = problem.getDeleted();
+        problem.setDeleted(!problem.getDeleted());
+        problemRepository.save(problem);
+        if(!status) return "Xóa Thử thách thành công";
+        return "Khôi phục Thử thách thành công";
     }
 }

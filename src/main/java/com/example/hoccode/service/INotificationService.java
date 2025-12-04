@@ -9,4 +9,6 @@ public interface INotificationService {
     List<Notification> getMyNotification();
     void read(Integer id);
     Notification create(CreateNotificationRequest request);
+
+    List<Notification> getAllForAdmin();
 }

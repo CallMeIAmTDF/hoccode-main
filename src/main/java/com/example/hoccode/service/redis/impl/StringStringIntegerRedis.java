@@ -43,4 +43,14 @@ public class StringStringIntegerRedis extends BaseRedisServiceImplV2<String, Str
     public void saveUserViewedDiscussion(String email, Integer discussionId){
         this.hashSet("view_discussion", email + ":" + discussionId, 1);
     }
+
+    @Override
+    public boolean isRoomExist(String roomId){
+        return this.hashExist("room", roomId);
+    }
+
+    @Override
+    public void saveRoom(String roomId){
+        this.hashSet("room", roomId, 1);
+    }
 }

@@ -4,13 +4,16 @@ import com.example.hoccode.advice.exception.BadRequestException;
 import com.example.hoccode.dto.SocketMessage;
 import com.example.hoccode.dto.projection.SubmissionWithProblemTitleProjection;
 import com.example.hoccode.dto.response.PlagiarismDetailResponse;
+import com.example.hoccode.dto.response.contest.ContestDetailResponse;
 import com.example.hoccode.entity.Contest;
 import com.example.hoccode.entity.Plagiarism;
 import com.example.hoccode.event.NotificationEvent;
 import com.example.hoccode.repository.ContestRepository;
 import com.example.hoccode.repository.PlagiarismRepository;
 import com.example.hoccode.repository.SubmissionRepository;
+import com.example.hoccode.service.IContestService;
 import com.example.hoccode.service.IPlagiarismService;
+import com.example.hoccode.service.IProblemService;
 import com.example.hoccode.util.SecurityUtil;
 import com.example.hoccode.util.constant.PlagiarismStatus;
 import com.example.hoccode.util.constant.SocketType;
@@ -25,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.MediaType;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -35,6 +39,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static com.example.hoccode.util.WebClientUtil.safeCall;
 
 @Slf4j
 @Service
@@ -47,6 +53,8 @@ public class PlagiarismService implements IPlagiarismService {
     SubmissionRepository submissionRepository;
     SimpMessagingTemplate messagingTemplate;
     KafkaTemplate<String, Object> kafkaTemplate;
+    IProblemService problemService;
+    IContestService contestService;
 
     @Qualifier("plagiarismClient")
     WebClient plagiarismClient;
@@ -186,4 +194,27 @@ public class PlagiarismService implements IPlagiarismService {
             return false;
         }
     }
+
+    @Override
+    public byte[] getFile(Integer contestId) {
+
+        ContestDetailResponse contest = contestService.getContestDetail(contestId);
+
+        return safeCall(
+                () -> plagiarismClient.post()
+                        .uri("/generate-pdf")
+                        .accept(MediaType.APPLICATION_PDF)
+                        .bodyValue(contest)
+                        .retrieve()
+                        .bodyToMono(byte[].class),
+                "Dịch vụ GPT gặp lỗi, vui lòng thử lại sau"
+        );
+    }
+
+    @Override
+    public Object getFile2(Integer contestId) {
+        ContestDetailResponse contest = contestService.getContestDetail(contestId);
+        return contest;
+    }
+
 }

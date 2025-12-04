@@ -5,8 +5,10 @@ import com.example.hoccode.entity.Problem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -26,7 +28,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Integer>, JpaS
         SELECT p.* FROM problems p
         
         LEFT JOIN submissions s ON s.pid = p.id AND s.status = 'ACCEPTED'
-        WHERE p.is_contest_problem = false
+        WHERE p.is_contest_problem = false AND p.deleted = false
         GROUP BY p.id
         ORDER BY COUNT(s.id) ASC
         LIMIT 100
@@ -55,6 +57,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Integer>, JpaS
     SELECT * FROM problems 
     WHERE difficulty = 'EASY' 
       AND is_contest_problem = false
+    AND deleted = false
     ORDER BY RAND() 
     LIMIT 1
 """, nativeQuery = true)
@@ -63,8 +66,18 @@ public interface ProblemRepository extends JpaRepository<Problem, Integer>, JpaS
     @Query("""
     SELECT p.difficulty AS diff, COUNT(p) AS total
     FROM Problem p
-    WHERE p.isContestProblem = false
+    WHERE p.isContestProblem = false AND p.deleted = false
     GROUP BY p.difficulty
 """)
     List<Object[]> countTotalByDifficulty();
+
+
+    @Query("""
+        SELECT COUNT(u)
+        FROM Problem u
+        WHERE u.createdAt < :startOfThisMonth
+    """)
+    long countProblemsBeforeMonth(@Param("startOfThisMonth") LocalDateTime startOfThisMonth);
+
+    Optional<Problem> findFirstById(Integer id);
 }

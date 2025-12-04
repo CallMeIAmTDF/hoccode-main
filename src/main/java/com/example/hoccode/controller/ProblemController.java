@@ -67,6 +67,17 @@ public class ProblemController {
                 .body(apiResponse);
     }
 
+    @PostMapping("/{problem_id}")
+    public ResponseEntity<ApiResponse<String>> update(@PathVariable Integer problem_id){
+        ApiResponse<String> apiResponse = ApiResponse.<String>builder()
+                .code(HttpStatus.OK.value())
+                .message("Delete Problem")
+                .data(problemService.deleteProblem(problem_id))
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
     @GetMapping("/leaderboard")
     public ResponseEntity<ApiResponse<List<UserPointResponse>>> getLeaderBoard(){
         ApiResponse<List<UserPointResponse>> apiResponse = ApiResponse.<List<UserPointResponse>>builder()
@@ -88,4 +99,6 @@ public class ProblemController {
         return ResponseEntity.ok()
                 .body(apiResponse);
     }
+
+
 }

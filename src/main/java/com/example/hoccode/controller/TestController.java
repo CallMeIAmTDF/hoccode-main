@@ -1,12 +1,17 @@
 package com.example.hoccode.controller;
 
-import com.example.hoccode.dto.request.create.CreateNotificationRequest;
 import com.example.hoccode.repository.SubmissionRepository;
 import com.example.hoccode.service.IContestService;
+import com.example.hoccode.service.IGPTService;
 import com.example.hoccode.service.INotificationService;
+import com.example.hoccode.service.IPlagiarismService;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +28,9 @@ public class TestController {
     KafkaTemplate<String, Object> kafkaTemplate;
     SubmissionRepository submissionRepository;
     IContestService contestService;
+    IGPTService gptService;
+    IPlagiarismService plagiarismService;
+
 //    @GetMapping("/test")
 //    public Object hello(){
 ////        int totalUsers = 100;
@@ -60,10 +68,24 @@ public class TestController {
     }
 
     @GetMapping("")
-    public void test(){
-        notificationService.create(CreateNotificationRequest.builder()
-                .content("123131213")
-                .title("Hello")
-                .build());
+    public Object test(){
+        return gptService.inDepthCodeAnalysis(4);
+    }
+
+    @GetMapping("/{id}/generatePDF")
+    public ResponseEntity<byte[]> generatePDF(@PathVariable Integer id){
+        byte[] fileData = plagiarismService.getFile(id);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.inline().filename("file.pdf").build());
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(fileData);
+    }
+
+    @GetMapping("/{id}/generatePDF2")
+    public ResponseEntity<Object> generatePDF2(@PathVariable Integer id){
+        return ResponseEntity.ok()
+                .body(plagiarismService.getFile2(id));
     }
 }

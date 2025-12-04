@@ -11,4 +11,8 @@ public interface IPlagiarismService {
     void callBack(Integer contestId);
 
     Boolean isPlagiarismChecked(Integer contestId);
+
+    byte[] getFile(Integer contestId);
+
+    Object getFile2(Integer contestId);
 }

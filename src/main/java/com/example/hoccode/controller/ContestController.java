@@ -12,7 +12,7 @@ import com.example.hoccode.dto.response.contest.ContestDetailResponse;
 import com.example.hoccode.dto.response.contest.ContestLeaderboardResponse;
 import com.example.hoccode.dto.response.contest.ContestResponse;
 import com.example.hoccode.entity.Contest;
-import com.example.hoccode.entity.Submission;
+import org.springframework.http.*;
 import com.example.hoccode.service.IContestService;
 import com.example.hoccode.service.IPlagiarismService;
 import com.example.hoccode.service.ISubmissionService;
@@ -248,5 +248,16 @@ public class ContestController {
                 .build();
         return ResponseEntity.ok()
                 .body(apiResponse);
+    }
+
+    @GetMapping("/{id}/generatePDF")
+    public ResponseEntity<byte[]> generatePDF(@PathVariable Integer id){
+        byte[] fileData = plagiarismService.getFile(id);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.inline().filename("contest_" + id + ".pdf").build());
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(fileData);
     }
 }

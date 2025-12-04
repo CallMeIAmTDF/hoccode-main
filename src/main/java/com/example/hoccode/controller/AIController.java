@@ -1,7 +1,7 @@
 package com.example.hoccode.controller;
 
 import com.example.hoccode.dto.ApiResponse;
-import com.example.hoccode.dto.response.CategoryCountResponse;
+import com.example.hoccode.dto.response.InDepthCodeAnalysisResponse;
 import com.example.hoccode.dto.response.call.BasicCodeAnalysisResponse;
 import com.example.hoccode.service.IGPTService;
 import lombok.AccessLevel;
@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/ai")
@@ -29,6 +27,17 @@ public class AIController {
                 .code(HttpStatus.OK.value())
                 .message("Basic Code Analysis")
                 .data(gptService.basicCodeAnalysis(submissionId))
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
+    @GetMapping("/codeAnalysis/inDepth/{problemId}")
+    public ResponseEntity<ApiResponse<InDepthCodeAnalysisResponse>> getInDepthCodeAnalysis(@PathVariable(required = true) Integer problemId) {
+        ApiResponse<InDepthCodeAnalysisResponse> apiResponse = ApiResponse.<InDepthCodeAnalysisResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("In-Depth Code Analysis")
+                .data(gptService.inDepthCodeAnalysis(problemId))
                 .build();
         return ResponseEntity.ok()
                 .body(apiResponse);

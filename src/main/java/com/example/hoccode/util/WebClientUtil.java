@@ -19,7 +19,7 @@ public class WebClientUtil {
             return call.get().block();
         } catch (WebClientResponseException e) {
             log.error("WebClient error: status={} body={}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new BadRequestException(errorMessage);
+            throw new BadRequestException("Lỗi hệ thống, vui lòng thử lại sau");
         } catch (Exception e) {
             log.error("Unexpected error during WebClient call", e);
             throw new BadRequestException("Lỗi hệ thống, vui lòng thử lại sau");

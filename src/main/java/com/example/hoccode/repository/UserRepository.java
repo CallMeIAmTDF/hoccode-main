@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,4 +39,22 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
             "WHERE MONTH(u.dob) = :month " +
             "AND DAY(u.dob) = :day")
     List<User> findUsersByBirthday(@Param("day") int day, @Param("month") int month);
+
+    @Query("SELECT COUNT(u) FROM User u WHERE FUNCTION('MONTH', u.createdAt) = :month AND FUNCTION('YEAR', u.createdAt) = :year")
+    long countUsersCreatedInMonth(@Param("month") int month, @Param("year") int year);
+
+    @Query("""
+        SELECT COUNT(u)
+        FROM User u
+        WHERE u.createdAt < :startOfThisMonth
+    """)
+    long countUsersBeforeMonth(@Param("startOfThisMonth") LocalDateTime startOfThisMonth);
+
+    @Query("""
+        SELECT u
+        FROM User u
+            WHERE u.role = "USER"
+        ORDER BY u.isLocked ASC, u.createdAt DESC
+    """)
+    List<User> findAllOrderByLocked();
 }

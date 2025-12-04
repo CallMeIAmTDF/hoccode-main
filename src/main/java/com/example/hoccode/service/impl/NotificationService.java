@@ -72,5 +72,10 @@ public class NotificationService implements INotificationService {
         );
     }
 
+    @Override
+    public List<Notification> getAllForAdmin(){
+        return notificationRepository.findAllForUser("");
+    }
+
 
 }
