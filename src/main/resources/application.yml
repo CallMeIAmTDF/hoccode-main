@@ -46,6 +46,11 @@ auth:
     refreshSignerKey: 4tFg9sKcVhPuA3xMnEjqRZ1YbvLU0dNW
     valid-duration: 86400
     refreshable-duration: 2592000
+  outbound:
+    identity:
+      client-id: "391255146342-mdm2kqf4afvr3je7850ku08qp2d6fcon.apps.googleusercontent.com"
+      client-secret: "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"
+      redirect-uri: "http://localhost:3000/auth/authenticate"
   verify:
     register-code-duration: 86400000 # 24 * 60 * 60 * 1000 = 86400000
     forgot-password-code-duration: 86400000

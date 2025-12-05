@@ -2,12 +2,14 @@ package com.example.hoccode.controller;
 
 import com.example.hoccode.advice.exception.IdInvalidException;
 import com.example.hoccode.dto.ApiResponse;
+import com.example.hoccode.dto.google.GoogleAuthRequest;
 import com.example.hoccode.dto.request.AuthenticationRequest;
 import com.example.hoccode.dto.request.create.CreateUserRequest;
 import com.example.hoccode.dto.request.VerifyNewPasswordRequest;
 import com.example.hoccode.dto.response.AuthenticationResponse;
 import com.example.hoccode.dto.response.UserResponse;
 import com.example.hoccode.service.AuthenticationService;
+import com.example.hoccode.service.IGoogleOAuthService;
 import com.example.hoccode.service.UserService;
 import com.example.hoccode.service.VerifyCodeService;
 import com.nimbusds.jose.JOSEException;
@@ -35,7 +37,7 @@ public class AuthenticationController {
     UserService userService;
     VerifyCodeService verifyCodeService;
     Logger logger = LoggerFactory.getLogger(AuthenticationController.class);
-
+    IGoogleOAuthService googleOAuthService;
 
     @PostMapping("/login")
     ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(@RequestBody AuthenticationRequest request) {
@@ -50,6 +52,22 @@ public class AuthenticationController {
 
         return ResponseEntity.ok()
                 .body(apiResponse);
+    }
+
+    @PostMapping("/login-google")
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> loginWithGoogle(
+            @RequestBody GoogleAuthRequest request) {
+
+        AuthenticationResponse authenticationResponse =
+                googleOAuthService.handleGoogleLogin(request.getIdToken());
+
+        ApiResponse<AuthenticationResponse> apiResponse = ApiResponse.<AuthenticationResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Google login success")
+                .data(authenticationResponse)
+                .build();
+
+        return ResponseEntity.ok(apiResponse);
     }
 
     @PostMapping("/register")
