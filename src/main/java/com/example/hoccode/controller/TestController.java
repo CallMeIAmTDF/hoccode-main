@@ -1,10 +1,7 @@
 package com.example.hoccode.controller;
 
 import com.example.hoccode.repository.SubmissionRepository;
-import com.example.hoccode.service.IContestService;
-import com.example.hoccode.service.IGPTService;
-import com.example.hoccode.service.INotificationService;
-import com.example.hoccode.service.IPlagiarismService;
+import com.example.hoccode.service.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -61,7 +58,8 @@ public class TestController {
 //    }
 
     INotificationService notificationService;
-
+    IRecommendationService recommendationService;
+//    ISubmissionService submissionService;
     @GetMapping("/{contestId}")
     public Map<String, Object> getContestStats(@PathVariable Integer contestId){
         return contestService.getContestStats(contestId);
@@ -87,5 +85,11 @@ public class TestController {
     public ResponseEntity<Object> generatePDF2(@PathVariable Integer id){
         return ResponseEntity.ok()
                 .body(plagiarismService.getFile2(id));
+    }
+
+    @GetMapping("/recommend")
+    public ResponseEntity<Object> recommend(){
+        return ResponseEntity.ok()
+                .body(recommendationService.recommendProblem());
     }
 }

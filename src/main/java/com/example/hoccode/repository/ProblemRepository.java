@@ -80,4 +80,8 @@ public interface ProblemRepository extends JpaRepository<Problem, Integer>, JpaS
     long countProblemsBeforeMonth(@Param("startOfThisMonth") LocalDateTime startOfThisMonth);
 
     Optional<Problem> findFirstById(Integer id);
+
+    List<Problem> findByDeletedFalse();
+
+    List<Problem> findByDeletedFalseAndIsContestProblemFalse();
 }

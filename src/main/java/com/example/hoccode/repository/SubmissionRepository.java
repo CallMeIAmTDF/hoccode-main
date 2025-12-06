@@ -343,4 +343,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, String> 
     Optional<Submission> findFirstById(String id);
 
     Optional<Submission> findTopByCreatedByAndPidOrderByCreatedAtDesc(String createdBy, Integer pid);
+
+    List<Submission> findByCreatedBy(String createdBy);
+
 }
