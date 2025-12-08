@@ -88,14 +88,9 @@ public class UltraRecommendationService implements IUltraRecommendationService {
         return handleCacheMiss(userEmail);
     }
 
-    /**
-     * Handle cache miss: Return random NGAY, compute async
-     * Đảm bảo response time luôn nhanh (< 50ms)
-     */
     private Problem handleCacheMiss(String userEmail) {
         log.info("Cache miss for user: {}. Returning random and computing async.", userEmail);
 
-        // Step 1: Get solved problems từ Redis (nếu có)
         String solvedKey = PREFIX_USER_SOLVED + userEmail;
         Set<Object> solvedSet = redisTemplate.opsForSet().members(solvedKey);
 
@@ -106,26 +101,19 @@ public class UltraRecommendationService implements IUltraRecommendationService {
                     .collect(Collectors.toSet());
         }
 
-        // Step 2: Return random problem NGAY (không đợi)
         Problem randomProblem = getRandomProblem(solvedProblems);
 
-        // Step 3: Trigger ASYNC computation cho lần sau
         computeRecommendationsAsync(userEmail);
 
         return randomProblem;
     }
 
-    /**
-     * ASYNC: Compute recommendations cho user
-     * Không block request, chạy background
-     */
     @Async
     protected void computeRecommendationsAsync(String userEmail) {
         try {
             log.info("Starting async computation for user: {}", userEmail);
             long startTime = System.currentTimeMillis();
 
-            // Step 1: Load user's solved problems (nếu chưa có trong Redis)
             String solvedKey = PREFIX_USER_SOLVED + userEmail;
             Set<Object> existingSolved = redisTemplate.opsForSet().members(solvedKey);
 
@@ -138,24 +126,18 @@ public class UltraRecommendationService implements IUltraRecommendationService {
                 }
             }
 
-            // Step 2: Compute similarity với other users
             computeSimilarityForUser(userEmail);
 
-            // Step 3: Generate recommendation queue
             generateRecommendationQueue(userEmail);
 
             long duration = System.currentTimeMillis() - startTime;
-            log.info("✓ Async computation completed for user {} in {}ms", userEmail, duration);
+            log.info("Async computation completed for user {} in {}ms", userEmail, duration);
 
         } catch (Exception e) {
             log.error("Error in async computation for user: {}", userEmail, e);
         }
     }
 
-    /**
-     * Ensure cache đã initialized
-     * Nếu chưa, chỉ load essentials (fast path)
-     */
     public void ensureCacheInitialized() {
         Boolean initialized = (Boolean) redisTemplate.opsForValue()
                 .get(KEY_CACHE_INITIALIZED);
@@ -164,29 +146,18 @@ public class UltraRecommendationService implements IUltraRecommendationService {
             return;
         }
 
-        // Cache chưa init - load minimal data để serve request ngay
         log.warn("Redis cache not fully initialized. Loading essentials...");
         lazyInitializeCache();
     }
 
-    /**
-     * Lazy initialization - CHỈ load essentials (< 500ms)
-     * Full preload sẽ chạy background
-     */
     private void lazyInitializeCache() {
         try {
             log.info("Starting MINIMAL lazy initialization...");
             long startTime = System.currentTimeMillis();
 
-            // Step 1: Load available problems (CRITICAL - must have)
             updateAvailableProblems();
             log.info("✓ Loaded available problems in {}ms",
                     System.currentTimeMillis() - startTime);
-
-            // Step 2: Mark as partially initialized
-            // Điều này ngăn các requests khác cũng chạy lazy init
-//            redisTemplate.opsForValue().set(KEY_CACHE_INITIALIZED, true,
-//                    1, TimeUnit.HOURS);
 
             redisTemplate.opsForValue().set(KEY_CACHE_INITIALIZED, true);
             redisTemplate.expire(KEY_CACHE_INITIALIZED, 1, TimeUnit.SECONDS);
@@ -195,7 +166,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
             log.info("Minimal lazy initialization completed in {}ms", duration);
             log.info("System can now serve requests. Full preload will run in background.");
 
-            // Step 3: Trigger FULL preload trong background (không đợi)
             CompletableFuture.runAsync(() -> {
                 try {
                     log.info("Starting FULL background preload...");
@@ -208,7 +178,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
                     long bgDuration = System.currentTimeMillis() - bgStart;
                     log.info("✓ Full background preload completed in {}ms", bgDuration);
 
-                    // Set permanent initialized flag
                     redisTemplate.opsForValue().set(KEY_CACHE_INITIALIZED, true);
 
                 } catch (Exception e) {
@@ -218,15 +187,10 @@ public class UltraRecommendationService implements IUltraRecommendationService {
 
         } catch (Exception e) {
             log.error("Lazy initialization failed", e);
-            // Không throw exception, để requests vẫn có thể serve (dù chậm)
         }
     }
 
-    /**
-     * Generate recommendation khi cache miss
-     */
     private Problem generateRecommendationSync(String userEmail) {
-        // Step 1: Get solved problems từ Redis
         String solvedKey = PREFIX_USER_SOLVED + userEmail;
         Set<Object> solvedSet = redisTemplate.opsForSet().members(solvedKey);
 
@@ -237,12 +201,10 @@ public class UltraRecommendationService implements IUltraRecommendationService {
                     .collect(Collectors.toSet());
         }
 
-        // Nếu chưa có trong Redis, load từ DB
         if (solvedProblems.isEmpty()) {
             solvedProblems = loadUserSolvedProblemsFromDB(userEmail);
         }
 
-        // Step 2: Get similar users từ Redis
         String similarKey = PREFIX_SIMILAR_USERS + userEmail;
         List<Object> similarUsersList = redisTemplate.opsForList()
                 .range(similarKey, 0, -1);
@@ -250,7 +212,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
         if (similarUsersList != null && !similarUsersList.isEmpty()) {
             Set<Integer> finalSolvedProblems = solvedProblems;
 
-            // Duyệt qua similar users
             for (Object similarUserObj : similarUsersList) {
                 String similarUser = (String) similarUserObj;
                 String similarSolvedKey = PREFIX_USER_SOLVED + similarUser;
@@ -265,7 +226,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
                             .findFirst();
 
                     if (recommendation.isPresent()) {
-                        // Async generate full queue
                         generateRecommendationsAsync(userEmail);
 
                         return problemRepository.findById(recommendation.get())
@@ -275,7 +235,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
             }
         }
 
-        // Step 3: No similar users - compute now
         if (similarUsersList == null || similarUsersList.isEmpty()) {
             CompletableFuture.runAsync(() -> {
                 try {
@@ -289,35 +248,25 @@ public class UltraRecommendationService implements IUltraRecommendationService {
             generateRecommendationsAsync(userEmail);
         }
 
-        // Fallback: random problem
         return getRandomProblem(solvedProblems);
     }
 
-    // ========== BACKGROUND JOBS ==========
+    // BACKGROUND JOBS
 
-    /**
-     * Job 1: Full pre-computation
-     * Chạy mỗi 6 giờ, HOẶC ngay sau app start (nếu enabled)
-     */
-    @Scheduled(fixedRate = 21600000, initialDelay = 21600000) // 6 hours, no immediate run
+    @Scheduled(fixedRate = 21600000, initialDelay = 21600000) // 6 hours
     public void preComputeAllRecommendations() {
         log.info("Starting scheduled Redis cache refresh...");
         long startTime = System.currentTimeMillis();
 
         try {
-            // Step 1: Load available problems
             updateAvailableProblems();
 
-            // Step 2: Load all user profiles to Redis
             loadAllUserProfiles();
 
-            // Step 3: Compute similarity matrix
             computeSimilarityMatrix();
 
-            // Step 4: Generate recommendations
             generateAllRecommendations();
 
-            // Mark as initialized
             redisTemplate.opsForValue().set(KEY_CACHE_INITIALIZED, true);
 
             long duration = System.currentTimeMillis() - startTime;
@@ -328,9 +277,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
         }
     }
 
-    /**
-     * Job 2: Update available problems
-     */
     @Scheduled(fixedRate = 3600000)
     public void updateAvailableProblems() {
         try {
@@ -340,7 +286,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
                     .map(Problem::getId)
                     .toList();
 
-            // Store to Redis set
             redisTemplate.delete(KEY_AVAILABLE_PROBLEMS);
             if (!problems.isEmpty()) {
                 redisTemplate.opsForSet().add(KEY_AVAILABLE_PROBLEMS,
@@ -354,25 +299,17 @@ public class UltraRecommendationService implements IUltraRecommendationService {
         }
     }
 
-    /**
-     * Job 3: Handle new submission event
-     * Update cache và regenerate recommendations
-     */
     @Async
     public void onNewSubmission(String userEmail, Integer problemId) {
         try {
             log.debug("Processing new submission: user={}, problem={}", userEmail, problemId);
 
-            // Update Redis set
             String solvedKey = PREFIX_USER_SOLVED + userEmail;
             redisTemplate.opsForSet().add(solvedKey, problemId);
             redisTemplate.expire(solvedKey, PROFILE_TTL, TimeUnit.SECONDS);
 
-            // Regenerate recommendations cho user này
             computeRecommendationsAsync(userEmail);
 
-            // Optional: update recommendations cho top 5 similar users
-            // (vì user này vừa solve problem mới, similar users có thể recommend problem đó)
             String similarKey = PREFIX_SIMILAR_USERS + userEmail;
             List<Object> similarUsers = redisTemplate.opsForList()
                     .range(similarKey, 0, 4); // Top 5
@@ -388,18 +325,14 @@ public class UltraRecommendationService implements IUltraRecommendationService {
         }
     }
 
-    // ========== HELPER METHODS ==========
+    // HELPER METHODS
 
-    /**
-     * Load tất cả user profiles vào Redis
-     */
     private void loadAllUserProfiles() {
         log.info("Loading all user profiles to Redis...");
 
         try {
             List<Submission> allSubmissions = submissionRepository.findAll();
 
-            // Group by user
             Map<String, Set<Integer>> profiles = allSubmissions.stream()
                     .collect(Collectors.groupingBy(
                             Submission::getCreatedBy,
@@ -409,15 +342,10 @@ public class UltraRecommendationService implements IUltraRecommendationService {
                             )
                     ));
 
-            // Batch write to Redis với pipeline
             redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
                 profiles.forEach((email, problems) -> {
                     String key = PREFIX_USER_SOLVED + email;
-
-                    // Clear old data
                     redisTemplate.delete(key);
-
-                    // Add all problems
                     if (!problems.isEmpty()) {
                         redisTemplate.opsForSet().add(key, problems.toArray());
                         redisTemplate.expire(key, PROFILE_TTL, TimeUnit.SECONDS);
@@ -433,14 +361,10 @@ public class UltraRecommendationService implements IUltraRecommendationService {
         }
     }
 
-    /**
-     * Compute similarity matrix cho tất cả users
-     */
     private void computeSimilarityMatrix() {
         log.info("Computing similarity matrix in Redis...");
 
         try {
-            // Get all user emails từ Redis
             Set<String> allUserKeys = redisTemplate.keys(PREFIX_USER_SOLVED + "*");
 
             if (allUserKeys.isEmpty()) {
@@ -454,7 +378,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
 
             log.info("Computing similarity for {} users", allUsers.size());
 
-            // Parallel processing
             allUsers.parallelStream().forEach(user -> {
                 try {
                     computeSimilarityForUser(user);
@@ -470,9 +393,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
         }
     }
 
-    /**
-     * Compute similarity cho 1 user
-     */
     private void computeSimilarityForUser(String targetUser) {
         String targetKey = PREFIX_USER_SOLVED + targetUser;
         Set<Object> targetProblems = redisTemplate.opsForSet().members(targetKey);
@@ -485,7 +405,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
                 .map(obj -> (Integer) obj)
                 .collect(Collectors.toSet());
 
-        // Get all other users
         Set<String> allUserKeys = redisTemplate.keys(PREFIX_USER_SOLVED + "*");
 
         List<UserSimilarity> similarities = new ArrayList<>();
@@ -507,7 +426,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
                     .map(obj -> (Integer) obj)
                     .collect(Collectors.toSet());
 
-            // Jaccard similarity
             Set<Integer> intersection = new HashSet<>(targetProblemIds);
             intersection.retainAll(otherProblemIds);
 
@@ -522,7 +440,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
             }
         }
 
-        // Sort và lấy top 20
         List<String> topSimilar = similarities.stream()
                 .sorted(Comparator.comparingDouble(
                         UserSimilarity::getSimilarity).reversed())
@@ -530,7 +447,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
                 .map(UserSimilarity::getEmail)
                 .toList();
 
-        // Store to Redis
         if (!topSimilar.isEmpty()) {
             String similarKey = PREFIX_SIMILAR_USERS + targetUser;
             redisTemplate.delete(similarKey);
@@ -539,9 +455,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
         }
     }
 
-    /**
-     * Generate recommendations cho tất cả users
-     */
     private void generateAllRecommendations() {
         log.info("Generating recommendations for all users...");
 
@@ -572,11 +485,7 @@ public class UltraRecommendationService implements IUltraRecommendationService {
         log.info("Recommendations generation completed");
     }
 
-    /**
-     * Generate recommendation queue cho 1 user
-     */
     private void generateRecommendationQueue(String userEmail) {
-        // Get solved problems
         String solvedKey = PREFIX_USER_SOLVED + userEmail;
         Set<Object> solvedSet = redisTemplate.opsForSet().members(solvedKey);
 
@@ -587,7 +496,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
                     .collect(Collectors.toSet());
         }
 
-        // Get similar users
         String similarKey = PREFIX_SIMILAR_USERS + userEmail;
         List<Object> similarUsers = redisTemplate.opsForList().range(similarKey, 0, -1);
 
@@ -617,7 +525,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
             }
         }
 
-        // Fill với random problems nếu không đủ
         if (recommendations.size() < 20) {
             Set<Object> availableSet = redisTemplate.opsForSet()
                     .members(KEY_AVAILABLE_PROBLEMS);
@@ -631,7 +538,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
             }
         }
 
-        // Store to Redis
         if (!recommendations.isEmpty()) {
             String queueKey = PREFIX_RECOMMENDATION_QUEUE + userEmail;
             redisTemplate.delete(queueKey);
@@ -651,9 +557,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
         generateRecommendationQueue(userEmail);
     }
 
-    /**
-     * Load user solved problems từ DB
-     */
     private Set<Integer> loadUserSolvedProblemsFromDB(String userEmail) {
         try {
             Set<Integer> problems = submissionRepository.findByCreatedBy(userEmail)
@@ -661,7 +564,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
                     .map(Submission::getPid)
                     .collect(Collectors.toSet());
 
-            // Cache to Redis
             if (!problems.isEmpty()) {
                 String key = PREFIX_USER_SOLVED + userEmail;
                 redisTemplate.opsForSet().add(key, problems.toArray());
@@ -676,9 +578,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
         }
     }
 
-    /**
-     * Check xem problem có hợp lệ không (not deleted, not contest)
-     */
     private boolean isValidProblem(Integer problemId) {
         try {
             Optional<Problem> problemOpt = problemRepository.findById(problemId);
@@ -689,7 +588,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
 
             Problem problem = problemOpt.get();
 
-            // Check không bị delete và không phải contest problem
             return !Boolean.TRUE.equals(problem.getDeleted())
                     && !Boolean.TRUE.equals(problem.getIsContestProblem());
 
@@ -699,15 +597,11 @@ public class UltraRecommendationService implements IUltraRecommendationService {
         }
     }
 
-    /**
-     * Get random problem (non-contest only)
-     */
     private Problem getRandomProblem(Set<Integer> excludeProblems) {
         Set<Object> availableSet = redisTemplate.opsForSet()
                 .members(KEY_AVAILABLE_PROBLEMS);
 
         if (availableSet == null || availableSet.isEmpty()) {
-            // Fallback: query từ DB
             return problemRepository.findByDeletedFalseAndIsContestProblemFalse()
                     .stream()
                     .filter(p -> !excludeProblems.contains(p.getId()))
@@ -732,7 +626,6 @@ public class UltraRecommendationService implements IUltraRecommendationService {
 
         Integer randomId = candidates.get(random.nextInt(candidates.size()));
 
-        // Double check không phải contest
         return problemRepository.findById(randomId)
                 .filter(p -> !Boolean.TRUE.equals(p.getIsContestProblem()))
                 .orElse(null);
@@ -778,27 +671,22 @@ public class UltraRecommendationService implements IUltraRecommendationService {
         long startTime = System.currentTimeMillis();
 
         try {
-            // Step 1: Available problems
             log.info("[1/4] Loading available problems...");
             updateAvailableProblems();
 
-            // Step 2: User profiles
             log.info("[2/4] Loading user profiles...");
             loadAllUserProfiles();
 
-            // Step 3: Similarity matrix
             log.info("[3/4] Computing similarity matrix...");
             computeSimilarityMatrix();
 
-            // Step 4: Generate recommendations
             log.info("[4/4] Generating recommendations...");
             generateAllRecommendations();
 
-            // Mark as initialized
             redisTemplate.opsForValue().set(KEY_CACHE_INITIALIZED, true);
 
             long duration = System.currentTimeMillis() - startTime;
-            log.info("✓ Full cache warm-up completed in {}ms (~{}s)",
+            log.info("Full cache warm-up completed in {}ms (~{}s)",
                     duration, duration / 1000);
 
         } catch (Exception e) {
