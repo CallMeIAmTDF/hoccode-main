@@ -92,4 +92,18 @@ public class TestController {
         return ResponseEntity.ok()
                 .body(recommendationService.recommendProblem());
     }
+
+    IUltraRecommendationService ultraRecommendationService;
+    @GetMapping("/ultraRecommend")
+    public ResponseEntity<Object> ultraRecommend(){
+        return ResponseEntity.ok()
+                .body(ultraRecommendationService.recommend());
+    }
+
+    @GetMapping("/ultraRecommend/clear")
+    public ResponseEntity<Object> ultraRecommendClearCache(){
+        ultraRecommendationService.clearCache();
+        return ResponseEntity.ok()
+                .body(null);
+    }
 }

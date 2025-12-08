@@ -9,6 +9,7 @@ import com.example.hoccode.dto.response.ProblemResponse;
 import com.example.hoccode.dto.response.UserPointResponse;
 import com.example.hoccode.entity.Problem;
 import com.example.hoccode.service.IProblemService;
+import com.example.hoccode.service.IUltraRecommendationService;
 import com.example.hoccode.service.UserService;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -28,6 +29,7 @@ import java.util.Map;
 public class ProblemController {
     IProblemService problemService;
     UserService userService;
+    IUltraRecommendationService ultraRecommendationService;
 
     @PostMapping("")
     public ResponseEntity<ApiResponse<Problem>> create(@RequestBody CreateProblemRequest createProblemRequest){
@@ -100,5 +102,16 @@ public class ProblemController {
                 .body(apiResponse);
     }
 
+    @GetMapping("/recommend")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> recommend(){
+        ApiResponse<Map<String, Integer>> apiResponse = ApiResponse.<Map<String, Integer>>builder()
+                .code(HttpStatus.OK.value())
+                .message("Get Recommend Problem")
+                .data(ultraRecommendationService.recommend())
+                .build();
+
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
 
 }

@@ -40,6 +40,7 @@ public class StreakScheduler {
         List<Streak> streaks = streakRepository.findNotUpdatedToday(todayStart);
         if(streaks.isEmpty()) return;
         streaks.forEach(streak -> {
+            if(streak.getCurrentStreak() == 0) return;
             NotificationEvent event = NotificationEvent.builder()
                     .channel("EMAIL")
                     .recipient(String.join(",", streak.getUser().getEmail()))
