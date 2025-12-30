@@ -6,6 +6,7 @@ import com.example.hoccode.advice.exception.BadRequestException;
 import com.example.hoccode.advice.exception.DuplicateRecordException;
 import com.example.hoccode.advice.exception.ResourceNotFoundException;
 import com.example.hoccode.dto.mapper.UserMapper;
+import com.example.hoccode.dto.request.UserUpdateRequest;
 import com.example.hoccode.dto.request.create.CreateUserRequest;
 import com.example.hoccode.dto.request.PasswordCreationRequest;
 import com.example.hoccode.dto.response.pageable.ResultPaginationDTO;
@@ -28,6 +29,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -198,7 +201,7 @@ public class UserServiceImpl implements UserService {
         NotificationEvent notificationEvent = NotificationEvent.builder()
                 .channel("EMAIL")
                 .recipient(newUser.getEmail())
-                .subject("Welcome to HocCode.io!!!")
+                .subject("Welcome to HocCode!!!")
                 .param(param)
                 .body("Hello, " + newUser.getName())
                 .build();
@@ -280,7 +283,7 @@ public class UserServiceImpl implements UserService {
         NotificationEvent notificationEvent = NotificationEvent.builder()
                 .channel("EMAIL")
                 .recipient(email)
-                .subject(email + ", reset your password")
+                .subject("Reset your password")
                 .param(param)
                 .build();
 
@@ -295,16 +298,30 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Cacheable(value = "shortCache", key = "T(String).format('profile:%s', @securityUtil.getCurrentUserLogin().get())")
     public Map<String, Object> getUserStats(){
         Map<String, Object> userStats = new HashMap<>();
         User currentUser = userRepository.findByEmail(securityUtil.getCurrentUserLogin().orElse(null)).orElseThrow(() -> new BadRequestException("Login"));
-        userStats.put("rank", userRepository.getUserRankByEmail(securityUtil.getCurrentUserLogin().orElse(null)));
+
+        Map<String, Object> stats = getStats(currentUser);
+
+        userStats.put("rank", stats.getOrDefault("rank", 999));
         userStats.put("info", userMapper.toUserResponse(currentUser));
-        userStats.put("joined", currentUser.getCreatedAt());
+        userStats.put("joined", stats.getOrDefault("joined", LocalDateTime.now()));
         userStats.put("streak", streakService.getStreak(currentUser.getEmail()));
         userStats.put("solved", submissionRepository.countAcceptedProblems(currentUser.getEmail()));
-        userStats.put("point", currentUser.getPoint());
+        userStats.put("point", stats.getOrDefault("point", 0));
         return userStats;
+    }
+
+    @Override
+    public Map<String, Object> getStats(User user){
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("rank", userRepository.getUserRankByEmail(securityUtil.getCurrentUserLogin().orElse(null)));
+        stats.put("joined", user.getCreatedAt());
+        stats.put("point", user.getPoint());
+
+        return stats;
     }
 
     @Override
@@ -316,6 +333,22 @@ public class UserServiceImpl implements UserService {
     public void lock(String userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new BadRequestException("Người dùng không tồn tại"));
         user.setIsLocked(!user.getIsLocked());
+        userRepository.save(user);
+    }
+
+    @Override
+    @CacheEvict(
+            value = "shortCache",
+            key = "T(String).format('profile:%s', @securityUtil.getCurrentUserLogin().get())"
+    )
+    @Transactional
+    public void update(UserUpdateRequest request){
+        User user = userRepository.findByEmail(securityUtil.getCurrentUserLogin().get()).orElseThrow(() -> new BadRequestException("Người dùng không tồn tại"));
+
+        user.setAvatar(request.getAvatar());
+        user.setName(request.getName());
+        user.setDob(request.getDob());
+
         userRepository.save(user);
     }
 }

@@ -86,8 +86,13 @@ public class ReportService implements IReportService {
     @Override
     public List<Report> getReports(){
         if(!securityUtil.isAdmin()){
-            reportRepository.findAllByCreatedBy(securityUtil.getCurrentUserLogin().get());
+            return reportRepository.findAllByCreatedBy(securityUtil.getCurrentUserLogin().get());
         }
         return reportRepository.findAllByOrderBySolvedAscCreatedAtDesc();
     }
+//
+//    @Override
+//    public List<Report> myReport(){
+//        return reportRepository.findAllByCreatedBy(securityUtil.getCurrentUserLogin().get());
+//    }
 }

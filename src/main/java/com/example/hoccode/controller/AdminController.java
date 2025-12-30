@@ -10,10 +10,11 @@ import com.example.hoccode.service.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 
@@ -27,7 +28,7 @@ public class AdminController {
     UserService userService;
     INotificationService notificationService;
     ISolutionService solutionService;
-
+    IPaymentService paymentService;
 
     @GetMapping("/dashboard/stats")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardStats() {
@@ -113,4 +114,38 @@ public class AdminController {
         return ResponseEntity.ok()
                 .body(apiResponse);
     }
+
+    @GetMapping("/payment/stats")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getPaymentStats() {
+        ApiResponse<Map<String, Object>> apiResponse = ApiResponse.<Map<String, Object>>builder()
+                .code(HttpStatus.OK.value())
+                .message("Dashboard Stats Item")
+                .data(paymentService.stats())
+                .build();
+
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
+    @GetMapping("/payment/stats/download/{fileName}")
+    public ResponseEntity<byte[]> downloadReport(@PathVariable String fileName) {
+        byte[] fileData = paymentService.downloadReports(fileName);
+
+        if (fileData == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(
+                ContentDisposition.attachment()
+                        .filename(fileName)
+                        .build()
+        );
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(fileData);
+    }
 }
+

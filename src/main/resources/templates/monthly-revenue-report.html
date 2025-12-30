@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <style>
+        body {
+            font-family: 'DejaVu Sans', sans-serif;
+            font-size: 12px;
+            padding: 40px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .sub-title {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .info {
+            margin-bottom: 20px;
+        }
+        .info div {
+            margin: 4px 0;
+        }
+        .summary {
+            border: 1px solid #ccc;
+            padding: 12px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+        table {
+            font-family: 'DejaVu Sans', sans-serif;
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 6px;
+        }
+        th {
+            background-color: #efefef;
+        }
+        .right {
+            text-align: right;
+        }
+        .footer {
+            margin-top: 40px;
+            text-align: right;
+            font-style: italic;
+        }
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Tạo hình nền bằng SVG để không cần file ảnh rời */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='220'><text x='0' y='100' fill='rgba(0,0,0,0.037)' font-size='70' transform='rotate(-30)'>HocCode</text></svg>");
+    background-repeat: repeat;
+    pointer-events: none;
+    z-index: -1000;
+  }
+    </style>
+</head>
+<body>
+
+<h1>BÁO CÁO DOANH THU</h1>
+<div class="sub-title">
+    Tháng <span th:text="${month}"></span>
+</div>
+
+<div class="info">
+    <div><strong>Đơn vị:</strong> HocCode</div>
+    <div>
+        <strong>Ngày lập báo cáo:</strong>
+        <span th:text="${createdDate}"></span>
+    </div>
+</div>
+
+<div class="summary">
+    <div>
+        <strong>Tổng doanh thu:</strong>
+        <span th:text="${totalRevenue}"></span> VND
+    </div>
+    <div>
+        <strong>Số giao dịch thành công:</strong>
+        <span th:text="${totalTransactions}"></span>
+    </div>
+    <div>
+        <strong>Doanh thu trung bình / giao dịch:</strong>
+        <span th:text="${avgRevenue}"></span> VND
+    </div>
+</div>
+
+<h3>Chi tiết giao dịch</h3>
+<table>
+    <thead>
+    <tr>
+        <th>STT</th>
+        <th>Email</th>
+        <th>Số tiền (VND)</th>
+        <th>Mã đơn</th>
+        <th>Ngày thanh toán</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="row : ${rows}">
+        <td th:text="${row.stt}"></td>
+        <td th:text="${row.email}"></td>
+        <td class="right" th:text="${row.amount}"></td>
+        <td th:text="${row.orderCode}"></td>
+        <td th:text="${row.paidAt}"></td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="footer">
+    Báo cáo được tạo tự động bởi hệ thống<br/>
+    Ngày <span th:text="${createdDate}"></span>
+</div>
+
+</body>
+</html>

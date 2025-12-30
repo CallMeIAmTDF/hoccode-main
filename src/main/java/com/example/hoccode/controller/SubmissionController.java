@@ -5,13 +5,16 @@ import com.example.hoccode.advice.exception.BadRequestException;
 import com.example.hoccode.dto.ApiResponse;
 import com.example.hoccode.dto.request.SubmissionUpdateRequest;
 import com.example.hoccode.dto.request.create.CreateSubmissionRequest;
+import com.example.hoccode.dto.response.MySubmissionResponse;
 import com.example.hoccode.dto.response.call.CodeRunnerResponse;
 import com.example.hoccode.entity.Submission;
 import com.example.hoccode.service.ISubmissionService;
 import com.example.hoccode.util.CustomHeaders;
+import com.example.hoccode.util.constant.StatusEnum;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -59,11 +62,17 @@ public class SubmissionController {
 
 
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<List<Submission>>> getMySubmission(){
-        ApiResponse<List<Submission>> apiResponse = ApiResponse.<List<Submission>>builder()
+    public ResponseEntity<ApiResponse<Page<MySubmissionResponse>>> getMySubmission(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) Integer pid,
+            @RequestParam(required = false) Boolean isContest,
+            @RequestParam(required = false) StatusEnum status
+    ){
+        ApiResponse<Page<MySubmissionResponse>> apiResponse = ApiResponse.<Page<MySubmissionResponse>>builder()
                 .code(HttpStatus.OK.value())
                 .message("Get My Submission")
-                .data(submissionService.getMySubmission())
+                .data(submissionService.getMySubmission(page, size, pid, isContest, status))
                 .build();
         return ResponseEntity.ok()
                 .body(apiResponse);

@@ -3,11 +3,14 @@ package com.example.hoccode.controller;
 import com.example.hoccode.advice.exception.IdInvalidException;
 import com.example.hoccode.dto.ApiResponse;
 import com.example.hoccode.dto.request.ProblemSearchRequest;
+import com.example.hoccode.dto.request.call.LeetCodeRequest;
 import com.example.hoccode.dto.request.create.CreateProblemRequest;
 import com.example.hoccode.dto.request.update.UpdateProblemRequest;
 import com.example.hoccode.dto.response.ProblemResponse;
 import com.example.hoccode.dto.response.UserPointResponse;
+import com.example.hoccode.dto.response.call.LeetCodeResponse;
 import com.example.hoccode.entity.Problem;
+import com.example.hoccode.service.IGPTService;
 import com.example.hoccode.service.IProblemService;
 import com.example.hoccode.service.IUltraRecommendationService;
 import com.example.hoccode.service.UserService;
@@ -30,6 +33,7 @@ public class ProblemController {
     IProblemService problemService;
     UserService userService;
     IUltraRecommendationService ultraRecommendationService;
+    IGPTService gptService;
 
     @PostMapping("")
     public ResponseEntity<ApiResponse<Problem>> create(@RequestBody CreateProblemRequest createProblemRequest){
@@ -113,5 +117,18 @@ public class ProblemController {
         return ResponseEntity.ok()
                 .body(apiResponse);
     }
+
+    @PostMapping("/crawl")
+    public ResponseEntity<ApiResponse<LeetCodeResponse>> crawl(@RequestBody LeetCodeRequest request){
+        ApiResponse<LeetCodeResponse> apiResponse = ApiResponse.<LeetCodeResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Crawl")
+                .data(gptService.crawlLeetCode(request.getUrl()))
+                .build();
+
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
 
 }

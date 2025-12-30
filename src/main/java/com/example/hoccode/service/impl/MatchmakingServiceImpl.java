@@ -230,6 +230,7 @@ public class MatchmakingServiceImpl implements MatchmakingService {
                             new SocketMessage(SocketType.NEW_NOTIFICATION, "Thông báo mới",
                                     null)
                     );
+
                     notifications.add(Notification.builder()
                             .title("Trận đấu kết thúc")
                             .type(NotificationTypeEnum.COMBAT)

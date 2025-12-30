@@ -8,6 +8,10 @@ spring:
 #    scheduling:
 #      zo
 #      time-zone: =Asia/Ho_Chi_Minh
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
   datasource:
     url: jdbc:mysql://localhost:3306/hoccode
     username: root
@@ -79,20 +83,32 @@ mailServer:
   isSSL: false
 
 api:
-  base-url: http://localhost:3000
+  base-url: ${FRONTEND_URL:http://localhost:3000}
   path:
     verify-register: "/auth/verify?code="
     verify-forgot-password: "/auth/forgot?code="
     notice-contest: "/contest/"
     noti-streak: "/learn"
     noti-plagiarism: "/profile/contest/"
+    payos: "/payment"
 
 app:
   rate-limit:
     enforced-endpoints:
-      POST /submission: submission-post-limit
-      POST /chat: chat-post-limit
-      GET /api/v1/expensive-query: expensive-query-limit
-      GET /test: test
+      - method: POST
+        path: /submission
+        limit-key: submission-post-limit
+      - method: POST
+        path: /chat
+        limit-key: chat-post-limit
+      - method: GET
+        path: /api/v1/expensive-query
+        limit-key: expensive-query-limit
+      - method: GET
+        path: /test
+        limit-key: test
 
-
+pay-os:
+  client-id: bd2473ed-e41e-433e-8866-d92ab3823a34
+  api-key: 4f8fd3bf-94e4-4bc7-b617-cfab6192faa0
+  checksum-key: 915a2831786201ff858ec72c2fd31539c51468e7df24b1939d74e262cc1feef6

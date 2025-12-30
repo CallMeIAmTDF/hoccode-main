@@ -2,17 +2,19 @@ package com.example.hoccode.controller;
 
 import com.example.hoccode.dto.ApiResponse;
 import com.example.hoccode.dto.request.ForgotPasswordRequest;
+import com.example.hoccode.dto.request.UserUpdateRequest;
 import com.example.hoccode.dto.response.AuthenticationResponse;
+import com.example.hoccode.entity.Solution;
 import com.example.hoccode.service.UserService;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -29,5 +31,18 @@ public class UserController {
                 .message("Verify email register success")
                 .data(null)
                 .build();
+    }
+
+    @PostMapping("")
+    public ResponseEntity<ApiResponse<Void>> update(@RequestBody UserUpdateRequest request) {
+        userService.update(request);
+
+        ApiResponse<Void> apiResponse = ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("User Update")
+                .data(null)
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
     }
 }

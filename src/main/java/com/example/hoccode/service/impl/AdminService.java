@@ -75,7 +75,7 @@ public class AdminService implements IAdminService {
                 .orElse(null);
         String message = "";
         if (latestContest != null) {
-            message = "Contest gần nhất: " + timeAgo(latestContest.getCreatedAt());
+            message = "Cuộc thi gần nhất: " + timeAgo(latestContest.getCreatedAt());
         }
         statsItems.add(
                 DashboardStatsItem.builder()

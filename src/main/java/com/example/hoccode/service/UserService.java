@@ -1,5 +1,6 @@
 package com.example.hoccode.service;
 
+import com.example.hoccode.dto.request.UserUpdateRequest;
 import com.example.hoccode.dto.request.create.CreateUserRequest;
 import com.example.hoccode.dto.request.PasswordCreationRequest;
 import com.example.hoccode.dto.response.pageable.ResultPaginationDTO;
@@ -84,7 +85,11 @@ public interface UserService {
 
     Map<String, Object> getUserStats();
 
+    Map<String, Object> getStats(User user);
+
     List<UserResponse> getAllUsers();
 
     void lock(String userId);
+
+    void update(UserUpdateRequest request);
 }

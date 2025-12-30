@@ -31,6 +31,9 @@ public class SecurityConfiguration {
             "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui/index.html#/",
             "/contest/*/plagiarism/callback",
             "/submission/handleCallBackApiHeheheheasd",
+            "/payment/webhook",
+            "/payment/stats/download/**",
+            "/chat/upload/*/callback/**"
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {

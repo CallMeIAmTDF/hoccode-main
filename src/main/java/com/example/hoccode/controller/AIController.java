@@ -1,6 +1,7 @@
 package com.example.hoccode.controller;
 
 import com.example.hoccode.dto.ApiResponse;
+import com.example.hoccode.dto.analysis.GPTProfileAnalysisResponse;
 import com.example.hoccode.dto.response.InDepthCodeAnalysisResponse;
 import com.example.hoccode.dto.response.call.BasicCodeAnalysisResponse;
 import com.example.hoccode.service.IGPTService;
@@ -38,6 +39,17 @@ public class AIController {
                 .code(HttpStatus.OK.value())
                 .message("In-Depth Code Analysis")
                 .data(gptService.inDepthCodeAnalysis(problemId))
+                .build();
+        return ResponseEntity.ok()
+                .body(apiResponse);
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<ApiResponse<GPTProfileAnalysisResponse>> profile() {
+        ApiResponse<GPTProfileAnalysisResponse> apiResponse = ApiResponse.<GPTProfileAnalysisResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Profile Summary")
+                .data(gptService.profileSummary())
                 .build();
         return ResponseEntity.ok()
                 .body(apiResponse);

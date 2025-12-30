@@ -1,10 +1,15 @@
 package com.example.hoccode.repository;
 
+import com.example.hoccode.dto.analysis.LanguageStatusCountDTO;
+import com.example.hoccode.dto.analysis.ProfileAnalysisDTO;
+import com.example.hoccode.dto.analysis.SubmissionLanguageCount;
+import com.example.hoccode.dto.analysis.SubmissionStatusCountDTO;
 import com.example.hoccode.dto.projection.IContestLeaderboardProjection;
 import com.example.hoccode.dto.projection.IContestProblemStatusProjection;
 import com.example.hoccode.dto.projection.ProblemSubmissionCount;
 
 import com.example.hoccode.dto.projection.SubmissionWithProblemTitleProjection;
+import com.example.hoccode.dto.response.MySubmissionResponse;
 import com.example.hoccode.dto.response.SubmissionCategoryCount;
 import com.example.hoccode.dto.response.SubmissionProblemResponse;
 import com.example.hoccode.entity.Submission;
@@ -346,4 +351,76 @@ public interface SubmissionRepository extends JpaRepository<Submission, String> 
 
     List<Submission> findByCreatedBy(String createdBy);
 
+    @Query("SELECT NEW com.example.hoccode.dto.analysis.SubmissionStatusCountDTO(s.status, COUNT(s)) " +
+            "FROM Submission s JOIN Problem p ON s.pid = p.id " +
+            "WHERE s.createdBy = :userEmail AND p.isContestProblem = FALSE " +
+            "GROUP BY s.status")
+    List<SubmissionStatusCountDTO> countStatusByCreatedByAndNonContestProblem(@Param("userEmail") String userEmail);
+
+    @Query("SELECT s FROM Submission s JOIN Problem p ON s.pid = p.id WHERE s.createdBy = :userEmail AND p.isContestProblem = :isContestProblem")
+    List<Submission> findNonContestSubmissionsByCreatedBy(
+            @Param("userEmail") String userEmail,
+            @Param("isContestProblem") Boolean isContestProblem
+    );
+
+    @Query("SELECT NEW com.example.hoccode.dto.analysis.SubmissionLanguageCount(s.language, COUNT(s)) " +
+            "FROM Submission s JOIN Problem p ON s.pid = p.id " +
+            "WHERE s.createdBy = :userEmail AND p.isContestProblem = FALSE " +
+            "GROUP BY s.language")
+    List<SubmissionLanguageCount> countAllSubmissionsByLanguage(@Param("userEmail") String userEmail);
+
+    @Query("SELECT NEW com.example.hoccode.dto.analysis.LanguageStatusCountDTO(s.language, s.status, COUNT(s)) " +
+            "FROM Submission s JOIN Problem p ON s.pid = p.id " +
+            "WHERE s.createdBy = :userEmail AND p.isContestProblem = FALSE " +
+            "GROUP BY s.language, s.status")
+    List<LanguageStatusCountDTO> countLanguageStatus(@Param("userEmail") String userEmail);
+
+    @Query("""
+    SELECT new com.example.hoccode.dto.response.MySubmissionResponse(
+        s.id,
+        s.pid,
+        s.code,
+        s.language,
+        s.status,
+        s.totalTestCases,
+        s.passedTestCase,
+        s.maxTime,
+        s.createdAt,
+        p.isContestProblem
+    )
+    FROM Submission s
+    JOIN Problem p ON p.id = s.pid
+    WHERE s.createdBy = :email
+    ORDER BY s.createdAt DESC
+    """)
+    List<MySubmissionResponse> findMySubmissions(String email);
+
+    @Query("""
+        SELECT new com.example.hoccode.dto.response.MySubmissionResponse(
+            s.id,
+            s.pid,
+            s.code,
+            s.language,
+            s.status,
+            s.totalTestCases,
+            s.passedTestCase,
+            s.maxTime,
+            s.createdAt,
+            p.isContestProblem
+        )
+        FROM Submission s
+        JOIN Problem p ON p.id = s.pid
+        WHERE (:email IS NULL OR s.createdBy = :email)
+        AND (:pid IS NULL OR s.pid = :pid)
+        AND (:isContest IS NULL OR p.isContestProblem = :isContest)
+        AND (:status IS NULL OR s.status = :status)
+        """
+    )
+    Page<MySubmissionResponse> filterSubmissions(
+            @Param("email") String email,
+            @Param("pid") Integer pid,
+            @Param("isContest") Boolean isContest,
+            @Param("status") StatusEnum status,
+            Pageable pageable
+    );
 }

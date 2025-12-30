@@ -9,6 +9,7 @@ import com.example.hoccode.dto.record.ProblemStats;
 import com.example.hoccode.dto.request.SubmissionUpdateRequest;
 import com.example.hoccode.dto.request.call.CodeRunnerRequest;
 import com.example.hoccode.dto.request.create.CreateSubmissionRequest;
+import com.example.hoccode.dto.response.MySubmissionResponse;
 import com.example.hoccode.dto.response.SubmissionCategoryCount;
 import com.example.hoccode.dto.response.SubmissionProblemResponse;
 import com.example.hoccode.dto.response.call.CodeRunnerResponse;
@@ -29,6 +30,11 @@ import jakarta.transaction.Transactional;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.sql.Date;
@@ -162,8 +168,25 @@ public class SubmissionService implements ISubmissionService {
     }
 
     @Override
-    public List<Submission> getMySubmission() {
-        return submissionRepository.findAllByCreatedBy(securityUtil.getCurrentUserLogin().get());
+    public Page<MySubmissionResponse> getMySubmission(
+            Integer page,
+            Integer size,
+            Integer pid,
+            Boolean isContest,
+            StatusEnum status
+    ) {
+        if (page == null) page = 0;
+        if (size == null) size = 10;
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        String email = securityUtil.getCurrentUserLogin().get();
+        return submissionRepository.filterSubmissions(
+                email,
+                pid,
+                isContest,
+                status,
+                pageable
+        );
     }
 
 
@@ -265,6 +288,7 @@ public class SubmissionService implements ISubmissionService {
     }
 
     @Override
+    @Cacheable(value = "shortCache", key = "T(String).format('profile:heatmap:%s', @securityUtil.getCurrentUserLogin().get())")
     public Map<LocalDate, Integer> getAcceptedCountLastYear() {
         LocalDate today = LocalDate.now();
         LocalDate startDate = today.withDayOfYear(1);   // 01-01 năm nay
@@ -293,6 +317,8 @@ public class SubmissionService implements ISubmissionService {
         return submissionRepository.countAcceptedByCategory(securityUtil.getCurrentUserLogin().get());
     }
 
+    @Override
+    @Cacheable(value = "shortCache", key = "T(String).format('profile:problem:stats:%s', @securityUtil.getCurrentUserLogin().get())")
     public ProblemStats getProblemStats() {
         List<Object[]> solvedList = submissionRepository.countSolvedByDifficulty(securityUtil.getCurrentUserLogin().get());
         List<Object[]> totalList = problemRepository.countTotalByDifficulty();

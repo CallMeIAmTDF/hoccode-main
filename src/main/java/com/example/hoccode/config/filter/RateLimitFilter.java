@@ -2,13 +2,17 @@ package com.example.hoccode.config.filter;
 
 import com.example.hoccode.config.property.RateLimitProperties;
 import com.example.hoccode.service.impl.RateLimiterService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 @Order(2)
@@ -66,19 +70,31 @@ public class RateLimitFilter implements Filter {
 //            return;
 //        }
 
-        String requestMethod = httpRequest.getMethod().toUpperCase();
-        String requestURI = httpRequest.getRequestURI();
-        String fullKey = requestMethod + " " + requestURI;
+        String method = httpRequest.getMethod().toUpperCase();
+        String path = httpRequest.getRequestURI();
 
-//        System.out.println("fullKey: " + fullKey);
-//        System.out.println("rateLimitProperties.getEnforcedEndpoints().get(fullKey): " + rateLimitProperties.getEnforcedEndpoints());
+        RateLimitProperties.EnforcedEndpoint matchedEndpoint =
+                rateLimitProperties.getEnforcedEndpoints().stream()
+                        .filter(e ->
+                                e.getMethod().equalsIgnoreCase(method)
+                                        && e.getPath().equals(path)
+                        )
+                        .findFirst()
+                        .orElse(null);
 
-        if (rateLimitProperties.getEnforcedEndpoints().containsKey(fullKey)) {
-            String rateLimitKey = rateLimitProperties.getEnforcedEndpoints().get(fullKey);
+        if (matchedEndpoint != null) {
+            String rateLimitKey = matchedEndpoint.getLimitKey();
+//            System.out.println("Rate limit applied: " + rateLimitKey);
+
             if (!rateLimiterService.isAllowed(rateLimitKey)) {
                 httpResponse.setStatus(429);
-                httpResponse.setContentType("application/json");
-                httpResponse.getWriter().write("{\"code\":429,\"message\":\"Truy cập quá nhanh" + "\"}");
+                Map<String, Object> body = new HashMap<>();
+                body.put("code", 429);
+                body.put("message", "Truy cập quá nhanh");
+                body.put("data", null);
+
+                httpResponse.setContentType("application/json;charset=UTF-8");
+                new ObjectMapper().writeValue(httpResponse.getWriter(), body);
                 return;
             }
         }

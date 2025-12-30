@@ -1,6 +1,7 @@
 package com.example.hoccode.service.impl;
 
 import com.example.hoccode.advice.exception.BadRequestException;
+import com.example.hoccode.dto.SocketMessage;
 import com.example.hoccode.dto.request.create.CreateNotificationRequest;
 import com.example.hoccode.entity.Notification;
 import com.example.hoccode.repository.NotificationRepository;
@@ -9,6 +10,7 @@ import com.example.hoccode.service.redis.IStringStringIntegerRedis;
 import com.example.hoccode.util.SecurityUtil;
 import com.example.hoccode.util.constant.NotificationStatusEnum;
 import com.example.hoccode.util.constant.NotificationTypeEnum;
+import com.example.hoccode.util.constant.SocketType;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -60,6 +62,7 @@ public class NotificationService implements INotificationService {
     @Override
     public Notification create(CreateNotificationRequest request){
         if(!securityUtil.isAdmin()) throw new BadRequestException("Không có quyền truy cập");
+
         return notificationRepository.save(
                 Notification.builder()
                         .type(NotificationTypeEnum.SYSTEM)

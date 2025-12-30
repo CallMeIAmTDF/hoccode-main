@@ -1,15 +1,22 @@
 package com.example.hoccode.service.impl;
 
 import com.example.hoccode.advice.exception.BadRequestException;
+import com.example.hoccode.dto.analysis.GPTProfileAnalysisResponse;
+import com.example.hoccode.dto.analysis.ProfileAnalysisDTO;
 import com.example.hoccode.dto.request.InDepthCodeAnalysisRequest;
 import com.example.hoccode.dto.request.call.BasicCodeAnalysisRequest;
+import com.example.hoccode.dto.request.call.LeetCodeRequest;
 import com.example.hoccode.dto.response.InDepthCodeAnalysisResponse;
 import com.example.hoccode.dto.response.call.BasicCodeAnalysisResponse;
+import com.example.hoccode.dto.response.call.LeetCodeResponse;
 import com.example.hoccode.entity.Problem;
 import com.example.hoccode.entity.Submission;
 import com.example.hoccode.repository.ProblemRepository;
 import com.example.hoccode.repository.SubmissionRepository;
 import com.example.hoccode.service.IGPTService;
+import com.example.hoccode.service.IPremiumUserService;
+import com.example.hoccode.service.IProfileAnalysisService;
+import com.example.hoccode.util.LeetCodeUrlValidator;
 import com.example.hoccode.util.SecurityUtil;
 import com.example.hoccode.util.constant.StatusEnum;
 import lombok.AccessLevel;
@@ -23,6 +30,7 @@ import static com.example.hoccode.util.WebClientUtil.safeCall;
 import org.springframework.cache.annotation.Cacheable;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -35,7 +43,11 @@ public class GPTService implements IGPTService {
 
     SubmissionRepository submissionRepository;
     ProblemRepository problemRepository;
+    IProfileAnalysisService profileAnalysisService;
     SecurityUtil securityUtil;
+    IPremiumUserService premiumUserService;
+
+    static Long ZERO = 0L;
 
     @Override
     @Cacheable(value = "hourlyCache", key = "#submissionId.hashCode()")
@@ -76,7 +88,7 @@ public class GPTService implements IGPTService {
     @Override
     @Cacheable(
             value = "shortCache",
-            key = "T(String).format('%s:%s', #problemId, @securityUtil.getCurrentUserLogin().get())"
+            key = "T(String).format('inDepthCodeAnalysis:%s:%s', #problemId, @securityUtil.getCurrentUserLogin().get())"
     )
     public InDepthCodeAnalysisResponse inDepthCodeAnalysis(Integer problemId){
         Problem problem = problemRepository.findByIdAndDeletedFalse(problemId).orElseThrow(() -> new BadRequestException("Thử thách không hợp lệ"));
@@ -87,9 +99,9 @@ public class GPTService implements IGPTService {
 
         List<Submission> submissions = submissionRepository.findRecentSubmissionsBetweenLastTwoAccepted(securityUtil.getCurrentUserLogin().get(), problemId);
 
-        if(submissions.size() < 2){
-            throw new BadRequestException("Không thể phân tích chuyên sâu");
-        }
+//        if(submissions.size() < 2){
+//            throw new BadRequestException("Không thể phân tích chuyên sâu");
+//        }
 
         return safeCall(
                 () -> gptClient.post()
@@ -103,7 +115,49 @@ public class GPTService implements IGPTService {
         );
     }
 
+    @Override
+    @Cacheable(value = "hourlyCache", key = "T(String).format('profileSummary:%s', @securityUtil.getCurrentUserLogin().get())")
+    public GPTProfileAnalysisResponse profileSummary(){
+        if(!premiumUserService.isPremium()){
+            throw new BadRequestException("Chỉ dành cho tài khoản Premium");
+        }
+
+        ProfileAnalysisDTO profileAnalysisDTO = profileAnalysisService.analyzeUserProfile();
+
+        if(ZERO.equals(profileAnalysisDTO.getSubmissionSummary().getPassedSubmissions())){
+            return GPTProfileAnalysisResponse.builder().build();
+        }
+
+        return safeCall(
+                () -> gptClient.post()
+                        .uri("/profile-summary")
+                        .bodyValue(profileAnalysisDTO)
+                        .retrieve()
+                        .bodyToMono(GPTProfileAnalysisResponse.class),
+                "Dịch vụ GPT gặp lỗi, vui lòng thử lại sau"
+        );
+    }
+
     public String getEmail(){
         return securityUtil.getCurrentUserLogin().get();
     }
+
+    @Override
+    public LeetCodeResponse crawlLeetCode(String url){
+
+        if(!LeetCodeUrlValidator.isLeetCodeUrl(url)){
+            throw new BadRequestException("Không phải url LeetCode");
+        }
+
+        return safeCall(
+                () -> gptClient.post()
+                        .uri("/crawl")
+                        .bodyValue(LeetCodeRequest.builder().url(url).build())
+                        .retrieve()
+                        .bodyToMono(LeetCodeResponse.class),
+                "Dịch vụ gặp lỗi, vui lòng thử lại sau"
+        );
+    }
+
+
 }

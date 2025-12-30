@@ -1,15 +1,18 @@
 package com.example.hoccode.service.impl;
 
 import com.example.hoccode.advice.exception.BadRequestException;
+import com.example.hoccode.dto.SocketMessage;
 import com.example.hoccode.entity.Streak;
 import com.example.hoccode.entity.User;
 import com.example.hoccode.repository.StreakRepository;
 import com.example.hoccode.repository.UserRepository;
 import com.example.hoccode.service.IStreakService;
+import com.example.hoccode.util.constant.SocketType;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -21,6 +24,7 @@ import java.time.LocalDate;
 public class StreakService implements IStreakService {
     StreakRepository streakRepository;
     UserRepository userRepository;
+    SimpMessagingTemplate webSocketTemplate;
 
     @Override
     public void increment(String email) {
@@ -32,23 +36,38 @@ public class StreakService implements IStreakService {
             LocalDate lastDate = streak.getUpdatedAt() != null ? streak.getUpdatedAt().toLocalDate() : streak.getCreatedAt().toLocalDate();
             // đã update
             if(lastDate.equals(today)){
-                System.out.println("đã update");
                 return;
             }
             // ngày hôm qua
             else if(lastDate.equals(today.minusDays(1))){
+                webSocketTemplate.convertAndSendToUser(
+                        email,
+                        "/topic/normal",
+                        new SocketMessage(SocketType.STREAK_UPDATE, "STREAK_UPDATE",
+                                streak.getCurrentStreak())
+                );
                 streak.setCurrentStreak(streak.getCurrentStreak() + 1);
-                System.out.println("ngày hôm qua");
             }
             // mất chuỗi
             else {
+                webSocketTemplate.convertAndSendToUser(
+                        email,
+                        "/topic/normal",
+                        new SocketMessage(SocketType.STREAK_UPDATE, "STREAK_UPDATE",
+                                0)
+                );
                 streak.setCurrentStreak(1);
-                System.out.println("mất chuỗi");
             }
             if (streak.getCurrentStreak() > streak.getMaxStreak()) {
                 streak.setMaxStreak(streak.getCurrentStreak());
             }
         }else{
+            webSocketTemplate.convertAndSendToUser(
+                    email,
+                    "/topic/normal",
+                    new SocketMessage(SocketType.STREAK_UPDATE, "STREAK_UPDATE",
+                            0)
+            );
             streak = Streak.builder()
                     .user(u)
                     .maxStreak(1)
