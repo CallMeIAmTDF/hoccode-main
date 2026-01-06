@@ -1,0 +1,45 @@
+version: "3.8"
+services:
+  authdb:
+    image: mysql
+    container_name: hoccode-db
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_DATABASE: hoccode
+      MYSQL_ROOT_PASSWORD: root
+
+  redis-stack:
+    image: redis/redis-stack:latest
+    container_name: redis-stack-local
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  code-runner:
+    image: iamtdf/code-runner:latest
+    container_name: code-runner
+    ports:
+      - "1337:1337"
+    environment:
+      - CALLBACK_API_URL=http://host.docker.internal:8080/submission/handleCallBackApiHeheheheasd
+      - TZ=Asia/Ho_Chi_Minh
+      - REDIS_ADDR=redis-stack-local:6379
+    restart: unless-stopped
+    depends_on:
+      - redis-stack
+
+  fast-api:
+    image: iamtdf/smart-fast-api:latest
+    container_name: fastapi-app-local
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env

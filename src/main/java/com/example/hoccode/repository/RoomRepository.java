@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,4 +19,9 @@ public interface RoomRepository extends JpaRepository<Room, String> {
 
     @Query("SELECT r FROM Room r JOIN RoomUser ru ON r.id = ru.roomId WHERE ru.userId = :userId AND r.status IN ('LOBBY', 'STARTED')")
     Optional<Room> findActiveRoomByUserId(String userId);
+
+    List<Room> findAllByStatusAndCreatedAtBefore(RoomStatus status, LocalDateTime createdAt);
+
+    List<Room> findAllByStatusAndStartedAtBefore(RoomStatus status, LocalDateTime dateTime);
+
 }

@@ -5,6 +5,7 @@ import com.example.hoccode.advice.ErrorCode;
 import com.example.hoccode.advice.exception.BadRequestException;
 import com.example.hoccode.advice.exception.DuplicateRecordException;
 import com.example.hoccode.advice.exception.ResourceNotFoundException;
+import com.example.hoccode.config.template.RabbitKafkaTemplate;
 import com.example.hoccode.dto.mapper.UserMapper;
 import com.example.hoccode.dto.request.UserUpdateRequest;
 import com.example.hoccode.dto.request.create.CreateUserRequest;
@@ -34,7 +35,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -57,7 +57,7 @@ public class UserServiceImpl implements UserService {
     PasswordEncoder passwordEncoder;
     UserMapper userMapper;
     SecurityUtil securityUtil;
-    KafkaTemplate<String, Object> kafkaTemplate;
+    RabbitKafkaTemplate kafkaTemplate;
     IStreakService streakService;
     SubmissionRepository submissionRepository;
 

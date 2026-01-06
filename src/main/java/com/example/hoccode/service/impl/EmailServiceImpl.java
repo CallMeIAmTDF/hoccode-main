@@ -90,6 +90,16 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
+    public void sendEmailPremium(NotificationEvent message) {
+        try {
+            putPropsDataMail(convertDataMail(message, ""), "premium_noti");
+        } catch (MessagingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    @Override
     public void sendEmailPlagiarism(NotificationEvent message) {
         try {
             putPropsDataMail(convertDataMail(message, urlNoticeStreak), "plagiarism_noti");
@@ -121,7 +131,7 @@ public class EmailServiceImpl implements EmailService {
         context.setVariables(dataMail.getProps());
 
         String html = templateEngine.process(templateName, context);
-
+        helper.setFrom("noreply@hoccode.cloud");
         helper.setTo(dataMail.getTo().split(","));
         helper.setSubject(dataMail.getSubject());
         helper.setText(html, true);

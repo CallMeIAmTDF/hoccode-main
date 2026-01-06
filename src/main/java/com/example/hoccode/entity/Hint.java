@@ -9,7 +9,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.util.Objects;
 
 @Entity
-@Table(name = "hints")
+@Table(name = "hints", indexes = {
+        @Index(name = "idx_hint_pid", columnList = "pid")
+})
 @Getter
 @Setter
 @Builder

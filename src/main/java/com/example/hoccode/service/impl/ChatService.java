@@ -1,6 +1,7 @@
 package com.example.hoccode.service.impl;
 
 import com.example.hoccode.advice.exception.BadRequestException;
+import com.example.hoccode.config.template.RabbitKafkaTemplate;
 import com.example.hoccode.dto.SocketMessage;
 import com.example.hoccode.dto.rag.ChatRequest;
 import com.example.hoccode.dto.rag.ChatResponse;
@@ -8,6 +9,7 @@ import com.example.hoccode.dto.rag.FileUploadResponse;
 import com.example.hoccode.dto.request.DocumentUploadRequest;
 import com.example.hoccode.entity.Document;
 import com.example.hoccode.entity.Report;
+import com.example.hoccode.event.NotificationEvent;
 import com.example.hoccode.repository.ChatMessageRepository;
 import com.example.hoccode.repository.DocumentRepository;
 import com.example.hoccode.repository.ReportRepository;
@@ -49,6 +51,7 @@ public class ChatService implements IChatService {
     ReportRepository reportRepository;
     SecurityUtil securityUtil;
     SimpMessagingTemplate messagingTemplate;
+    RabbitKafkaTemplate kafkaTemplate;
 
 //    SensitiveWordValidationUtil wordValidationUtil;
     ISensitiveWordService sensitiveWordService;
@@ -102,6 +105,7 @@ public class ChatService implements IChatService {
                     Report.builder()
                             .target("")
                             .type(ReportTypeEnum.SYSTEM)
+                            .solved(false)
                             .title(title)
                             .description(description)
                             .build()
@@ -195,6 +199,8 @@ public class ChatService implements IChatService {
                 new SocketMessage(SocketType.NEW_NOTIFICATION, message,
                         doc)
         );
+
+
 
     }
 }

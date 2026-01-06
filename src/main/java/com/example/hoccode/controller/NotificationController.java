@@ -6,7 +6,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
@@ -20,17 +20,17 @@ public class NotificationController {
     EmailService emailService;
     Executor taskExecutor;
 
-    @KafkaListener(topics = "notification-delivery")
+    @RabbitListener(queues = "notification-delivery")
     public void listenNotificationDelivery(NotificationEvent message){
         emailService.sendEmailRegister(message);
     }
 
-    @KafkaListener(topics = "forgot-password")
+    @RabbitListener(queues = "forgot-password")
     public void listenNotificationForgotPassword(NotificationEvent message){
         emailService.sendEmailForgotPassword(message);
     }
 
-    @KafkaListener(topics = "contest-delivery", concurrency = "3")
+    @RabbitListener(queues = "contest-delivery", concurrency = "3")
     public void listenContestDelivery(NotificationEvent message){
         CompletableFuture.runAsync(() -> {
             log.info("Sending email to {}", message.getRecipient());
@@ -38,17 +38,22 @@ public class NotificationController {
         }, taskExecutor);
     }
 
-    @KafkaListener(topics = "birthday")
+    @RabbitListener(queues = "birthday")
     public void listenNotificationHappyBirthday(NotificationEvent message){
         emailService.sendEmailHappyBirthday(message);
     }
 
-    @KafkaListener(topics = "streaks")
+    @RabbitListener(queues = "streaks")
     public void listenNotificationStreaks(NotificationEvent message){
         emailService.sendEmailStreaks(message);
     }
 
-    @KafkaListener(topics = "plagiarism")
+    @RabbitListener(queues = "premium")
+    public void listenNotificationPremium(NotificationEvent message){
+        emailService.sendEmailPremium(message);
+    }
+
+    @RabbitListener(queues = "plagiarism")
     public void listenNotificationPlagiarism(NotificationEvent message){
         emailService.sendEmailPlagiarism(message);
     }

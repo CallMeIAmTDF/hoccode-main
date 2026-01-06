@@ -31,10 +31,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -120,6 +118,12 @@ public class MatchmakingServiceImpl implements MatchmakingService {
         }
     }
 
+    @Transactional
+    public void performCleanup(List<String> roomIds) {
+        roomUserRepo.deleteByRoomIdIn(roomIds);
+        roomRepo.deleteAllByIdInBatch(roomIds);
+    }
+
     private Room createNewLobby() {
         Room lobby = Room.builder()
                 .status(RoomStatus.LOBBY)
@@ -178,71 +182,185 @@ public class MatchmakingServiceImpl implements MatchmakingService {
     @Scheduled(fixedRate = 4000)
     @Transactional
     public void checkLobbyTimeouts() {
-        List<Room> lobbies = roomRepo.findAllByStatus(RoomStatus.LOBBY);
-        for (Room lobby : lobbies) {
-            long minutesPassed = ChronoUnit.MINUTES.between(lobby.getCreatedAt(), LocalDateTime.now());
-            if (minutesPassed >= 2) {
-                long count = roomUserRepo.countByRoomId(lobby.getId());
-                String message = count < 4
-                        ? "Phòng đợi hủy do chưa đủ 4 người"
-                        : "Phòng đợi hết thời gian";
-                List<RoomUser> users = roomUserRepo.findByRoomId(lobby.getId());
-                for (RoomUser ru : users) {
-                    webSocketTemplate.convertAndSendToUser(
-                            ru.getUserId(),
-                            "/queue",
-                            new SocketMessage(SocketType.ROOM_CANCEL, message, null)
-                    );
-                }
-                roomUserRepo.deleteByRoomId(lobby.getId());
-                roomRepo.delete(lobby);
+//        List<Room> lobbies = roomRepo.findAllByStatus(RoomStatus.LOBBY);
+
+
+        LocalDateTime threshold = LocalDateTime.now().minusMinutes(2);
+        List<Room> expiredLobbies = roomRepo.findAllByStatusAndCreatedAtBefore(RoomStatus.LOBBY, threshold);
+
+        if (expiredLobbies.isEmpty()) return;
+        List<String> expiredIds = expiredLobbies.stream().map(Room::getId).toList();
+        List<RoomUser> allUsers = roomUserRepo.findByRoomIdIn(expiredIds);
+
+        Map<String, List<RoomUser>> usersByRoom = allUsers.stream()
+                .collect(Collectors.groupingBy(RoomUser::getRoomId));
+
+        for (Room lobby : expiredLobbies) {
+            List<RoomUser> users = usersByRoom.getOrDefault(lobby.getId(), Collections.emptyList());
+            int count = users.size();
+
+            String message = count < 4
+                    ? "Phòng đợi hủy do chưa đủ 4 người"
+                    : "Phòng đợi hết thời gian";
+
+            for (RoomUser ru : users) {
+                webSocketTemplate.convertAndSendToUser(
+                        ru.getUserId(),
+                        "/queue",
+                        new SocketMessage(SocketType.ROOM_CANCEL, message, null)
+                );
             }
+        }
+
+        performCleanup(expiredIds);
+
+
+//        for (Room lobby : lobbies) {
+//            long minutesPassed = ChronoUnit.MINUTES.between(lobby.getCreatedAt(), LocalDateTime.now());
+//            if (minutesPassed >= 2) {
+//                long count = roomUserRepo.countByRoomId(lobby.getId());
+//                String message = count < 4
+//                        ? "Phòng đợi hủy do chưa đủ 4 người"
+//                        : "Phòng đợi hết thời gian";
+//                List<RoomUser> users = roomUserRepo.findByRoomId(lobby.getId());
+//                for (RoomUser ru : users) {
+//                    webSocketTemplate.convertAndSendToUser(
+//                            ru.getUserId(),
+//                            "/queue",
+//                            new SocketMessage(SocketType.ROOM_CANCEL, message, null)
+//                    );
+//                }
+//                roomUserRepo.deleteByRoomId(lobby.getId());
+//                roomRepo.delete(lobby);
+//            }
+//        }
+    }
+
+//    @Override
+//    @Scheduled(fixedRate = 5000)
+//    @Transactional
+//    public void checkRoomTimeouts() {
+//        List<Room> activeRooms = roomRepo.findAllByStatus(RoomStatus.STARTED);
+//        for (Room room : activeRooms) {
+//            List<RoomUser> users = roomUserRepo.findByRoomId(room.getId());
+//            boolean allSubmitted = users.stream().allMatch(ru -> ru.getSubmissionId() != null);
+//            long minutesPassed = ChronoUnit.MINUTES.between(room.getStartedAt(), LocalDateTime.now());
+//
+//            if (allSubmitted || minutesPassed >= 15) {
+//                room.setStatus(RoomStatus.FINISHED);
+//                room.setFinishedAt(LocalDateTime.now());
+//                roomRepo.save(room);
+//                updateLeaderboard(room.getId());
+//                List<Notification> notifications = new ArrayList<>();
+//                for (RoomUser ru : users) {
+//                    webSocketTemplate.convertAndSendToUser(
+//                            ru.getUserId(),
+//                            "/queue",
+//                            new SocketMessage(SocketType.ROOM_END, "Phòng kết thúc! Room ID: " + room.getId(),
+//                                    new RoomEndResponse(room.getId(), ru.getRank()))
+//                    );
+//
+//                    webSocketTemplate.convertAndSendToUser(
+//                            ru.getUserId(),
+//                            "/topic/notification",
+//                            new SocketMessage(SocketType.NEW_NOTIFICATION, "Thông báo mới",
+//                                    null)
+//                    );
+//
+//                    notifications.add(Notification.builder()
+//                            .title("Trận đấu kết thúc")
+//                            .type(NotificationTypeEnum.COMBAT)
+//                            .message("Bạn đã đạt được thứ hạng #" + ru.getRank())
+//                            .receiver(ru.getUserId())
+//                            .status(NotificationStatusEnum.SEND)
+//                            .build());
+//                }
+//                notificationRepository.saveAll(
+//                    notifications
+//                );
+//            }
+//        }
+//    }
+
+    @Override
+    @Scheduled(fixedRate = 10000)
+    @Transactional
+    public void checkRoomTimeouts() {
+        LocalDateTime timeoutThreshold = LocalDateTime.now().minusMinutes(15);
+
+        // 1. Lấy nhanh các phòng đã quá 15 phút (Query cực nhanh bằng Index)
+        List<Room> timedOutRooms = roomRepo.findAllByStatusAndStartedAtBefore(RoomStatus.STARTED, timeoutThreshold);
+
+        // 2. Lấy các phòng đang chạy để kiểm tra allSubmitted
+        List<Room> activeRooms = roomRepo.findAllByStatus(RoomStatus.STARTED);
+
+        Set<Room> roomsToFinish = new HashSet<>(timedOutRooms);
+
+        // Map để cache RoomUser, tránh gọi DB trong vòng lặp tiếp theo
+        List<String> activeRoomIds = activeRooms.stream().map(Room::getId).toList();
+        List<RoomUser> allActiveUsers = roomUserRepo.findByRoomIdIn(activeRoomIds);
+        Map<String, List<RoomUser>> usersByRoom = allActiveUsers.stream()
+                .collect(Collectors.groupingBy(RoomUser::getRoomId));
+
+        for (Room room : activeRooms) {
+            List<RoomUser> users = usersByRoom.getOrDefault(room.getId(), Collections.emptyList());
+            if (!users.isEmpty() && users.stream().allMatch(ru -> ru.getSubmissionId() != null)) {
+                roomsToFinish.add(room);
+            }
+        }
+
+        // 3. Xử lý kết thúc hàng loạt
+        for (Room room : roomsToFinish) {
+            finishRoomLogic(room, usersByRoom.getOrDefault(room.getId(), Collections.emptyList()));
         }
     }
 
-    @Override
-    @Scheduled(fixedRate = 5000)
     @Transactional
-    public void checkRoomTimeouts() {
-        List<Room> activeRooms = roomRepo.findAllByStatus(RoomStatus.STARTED);
-        for (Room room : activeRooms) {
-            List<RoomUser> users = roomUserRepo.findByRoomId(room.getId());
-            boolean allSubmitted = users.stream().allMatch(ru -> ru.getSubmissionId() != null);
-            long minutesPassed = ChronoUnit.MINUTES.between(room.getStartedAt(), LocalDateTime.now());
+    public void finishRoomLogic(Room room, List<RoomUser> users) {
+        room.setStatus(RoomStatus.FINISHED);
+        room.setFinishedAt(LocalDateTime.now());
+        roomRepo.save(room);
 
-            if (allSubmitted || minutesPassed >= 15) {
-                room.setStatus(RoomStatus.FINISHED);
-                room.setFinishedAt(LocalDateTime.now());
-                roomRepo.save(room);
-                updateLeaderboard(room.getId());
-                List<Notification> notifications = new ArrayList<>();
-                for (RoomUser ru : users) {
-                    webSocketTemplate.convertAndSendToUser(
-                            ru.getUserId(),
-                            "/queue",
-                            new SocketMessage(SocketType.ROOM_END, "Phòng kết thúc! Room ID: " + room.getId(),
-                                    new RoomEndResponse(room.getId(), ru.getRank()))
-                    );
+        updateLeaderboard(room.getId());
 
-                    webSocketTemplate.convertAndSendToUser(
-                            ru.getUserId(),
-                            "/topic/notification",
-                            new SocketMessage(SocketType.NEW_NOTIFICATION, "Thông báo mới",
-                                    null)
-                    );
+        List<Notification> notifications = new ArrayList<>();
+        for (RoomUser ru : users) {
+            sendSocketMessages(room, ru);
 
-                    notifications.add(Notification.builder()
-                            .title("Trận đấu kết thúc")
-                            .type(NotificationTypeEnum.COMBAT)
-                            .message("Bạn đã đạt được thứ hạng #" + ru.getRank())
-                            .receiver(ru.getUserId())
-                            .status(NotificationStatusEnum.SEND)
-                            .build());
-                }
-                notificationRepository.saveAll(
-                    notifications
-                );
-            }
+            notifications.add(Notification.builder()
+                    .title("Trận đấu kết thúc")
+                    .type(NotificationTypeEnum.COMBAT)
+                    .message("Bạn đã đạt được thứ hạng #" + ru.getRank())
+                    .receiver(ru.getUserId())
+                    .status(NotificationStatusEnum.SEND)
+                    .build());
+        }
+        notificationRepository.saveAll(notifications);
+    }
+
+    private void sendSocketMessages(Room room, RoomUser ru) {
+        try {
+            webSocketTemplate.convertAndSendToUser(
+                    ru.getUserId(),
+                    "/queue",
+                    new SocketMessage(
+                            SocketType.ROOM_END,
+                            "Phòng kết thúc! Room ID: " + room.getId(),
+                            new RoomEndResponse(room.getId(), ru.getRank())
+                    )
+            );
+
+            webSocketTemplate.convertAndSendToUser(
+                    ru.getUserId(),
+                    "/topic/notification",
+                    new SocketMessage(
+                            SocketType.NEW_NOTIFICATION,
+                            "Thông báo mới",
+                            null
+                    )
+            );
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi WebSocket cho user: " + ru.getUserId(), e);
         }
     }
 

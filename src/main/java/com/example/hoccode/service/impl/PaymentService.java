@@ -1,6 +1,7 @@
 package com.example.hoccode.service.impl;
 
 import com.example.hoccode.advice.exception.BadRequestException;
+import com.example.hoccode.config.template.RabbitKafkaTemplate;
 import com.example.hoccode.dto.SocketMessage;
 import com.example.hoccode.dto.payment.MonthlyRevenueDTO;
 import com.example.hoccode.dto.payment.PaidPaymentReportRow;
@@ -8,6 +9,7 @@ import com.example.hoccode.dto.payment.projection.MonthlyRevenueProjection;
 import com.example.hoccode.dto.response.pdf.PdfFileInfo;
 import com.example.hoccode.entity.Payment;
 import com.example.hoccode.entity.PremiumUser;
+import com.example.hoccode.event.NotificationEvent;
 import com.example.hoccode.repository.PaymentRepository;
 import com.example.hoccode.repository.PremiumUserRepository;
 import com.example.hoccode.service.IPaymentService;
@@ -37,19 +39,13 @@ import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
 import vn.payos.model.webhooks.Webhook;
 import vn.payos.model.webhooks.WebhookData;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -67,6 +63,11 @@ public class PaymentService implements IPaymentService {
     final MonthlyRevenueReportTemplate reportTemplate;
     final IPdfRenderService pdfRenderService;
     final TemplateEngine templateEngine;
+    RabbitKafkaTemplate kafkaTemplate;
+
+    @Value("${app.pdf.directory}")
+    private String pdfDirectory;
+
     static final String PDF_DIRECTORY = "src/main/resources/assets/pdf_report/";
 
     @Value("${api.base-url}")
@@ -76,6 +77,11 @@ public class PaymentService implements IPaymentService {
     String pathPayos;
 
     final static Integer AMOUNT = 10000;
+
+    private String getReportsPath() {
+        String base = pdfDirectory.endsWith("/") ? pdfDirectory : pdfDirectory + "/";
+        return base + "reports/";
+    }
 
     @Override
     @Transactional
@@ -137,6 +143,16 @@ public class PaymentService implements IPaymentService {
                     new SocketMessage(SocketType.PREMIUM_USER, "Nâng cấp tài khoản thành công",
                             true)
             );
+            Map<String, String> param = new HashMap<>();
+            param.put("name", payment.getCreatedBy().split("@")[0]);
+            NotificationEvent notificationEvent = NotificationEvent.builder()
+                    .channel("EMAIL")
+                    .recipient(payment.getCreatedBy())
+                    .subject("Thanh toán thành công!!!")
+                    .param(param)
+                    .body("Thanh toán thành công!!!")
+                    .build();
+            kafkaTemplate.send("premium", notificationEvent);
 
             return data;
         } catch (Exception e) {
@@ -204,8 +220,7 @@ public class PaymentService implements IPaymentService {
                 .toList();
     }
 
-        @Scheduled(cron = "0 0 0 1 * ?")
-//    @Scheduled(cron = "0 56 23 * * ?")
+    @Scheduled(cron = "0 0 0 1 * ?")
     public void generateMonthlyReport() throws Exception {
 
         YearMonth lastMonth = YearMonth.now().minusMonths(1);
@@ -233,10 +248,9 @@ public class PaymentService implements IPaymentService {
                 "monthly-revenue-report",
                 variables
         );
-//        String outputFilePath = PDF_DIRECTORY + "reports/revenue-" + lastMonth + ".pdf";
         String outputFilePath = String.format(
-                "%sreports/revenue-%02d-%d.pdf",
-                PDF_DIRECTORY,
+                "%srevenue-%02d-%d.pdf",
+                getReportsPath(),
                 lastMonth.getMonth().getValue(),
                 lastMonth.getYear()
         );
@@ -253,7 +267,26 @@ public class PaymentService implements IPaymentService {
         return templateEngine.process(templateName, context);
     }
 
-    private void generatePdf(String htmlContent, String outputFilePath) throws Exception {
+//    private void generatePdf(String htmlContent, String outputFilePath) throws Exception {
+//        File outputFile = new File(outputFilePath);
+//        File parentFolder = outputFile.getParentFile();
+//
+//        if (parentFolder != null && !parentFolder.exists()) {
+//            parentFolder.mkdirs();
+//        }
+//
+//        try (OutputStream outputStream = new FileOutputStream(outputFile)) {
+//            ITextRenderer renderer = new ITextRenderer();
+//            String fontPath = new ClassPathResource("/assets/font/DejaVuSans.ttf").getURL().toString();
+//            renderer.getFontResolver().addFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+//
+//            renderer.setDocumentFromString(htmlContent);
+//            renderer.layout();
+//            renderer.createPDF(outputStream);
+//        }
+//    }
+
+    private void generatePdf(String htmlContent, String outputFilePath) {
         File outputFile = new File(outputFilePath);
         File parentFolder = outputFile.getParentFile();
 
@@ -263,43 +296,102 @@ public class PaymentService implements IPaymentService {
 
         try (OutputStream outputStream = new FileOutputStream(outputFile)) {
             ITextRenderer renderer = new ITextRenderer();
-            String fontPath = new ClassPathResource("/assets/font/DejaVuSans.ttf").getURL().toString();
-            renderer.getFontResolver().addFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
 
-            renderer.setDocumentFromString(htmlContent);
-            renderer.layout();
-            renderer.createPDF(outputStream);
+            try (InputStream is = new ClassPathResource("assets/font/DejaVuSans.ttf").getInputStream()) {
+                File tempFontFile = File.createTempFile("dejavusans", ".ttf");
+                tempFontFile.deleteOnExit();
+                try (OutputStream os = new FileOutputStream(tempFontFile)) {
+                    is.transferTo(os);
+                }
+
+                renderer.getFontResolver().addFont(tempFontFile.getAbsolutePath(), BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+                renderer.setDocumentFromString(htmlContent);
+                renderer.layout();
+                renderer.createPDF(outputStream);
+
+            } catch (IOException e) {
+                System.err.println("Lỗi khi đọc hoặc tạo font: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tạo PDF: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
+
     @Override
     public List<PdfFileInfo> getReportFile() {
+//        List<PdfFileInfo> pdfFiles = new ArrayList<>();
+//        try {
+//            Path path = Path.of(PDF_DIRECTORY + "reports/");
+//            Files.walk(path)
+//                    .filter(Files::isRegularFile)
+//                    .filter(p -> p.toString().endsWith(".pdf"))
+//                    .forEach(p -> {
+//                        try {
+//                            long fileSize = Files.size(p);
+//                            String fileName = p.getFileName().toString();
+//                            String lastModified = fileName.replace("pvp_rank_report_", "").replace(".pdf", "");
+//                            pdfFiles.add(new PdfFileInfo(
+//                                    fileName, fileSize, lastModified));
+//                        } catch (IOException e) {
+//                            e.printStackTrace();
+//                        }
+//                    });
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        return pdfFiles;
+
         List<PdfFileInfo> pdfFiles = new ArrayList<>();
+        Path path = Path.of(getReportsPath());
+
         try {
-            Path path = Path.of(PDF_DIRECTORY + "reports/");
-            Files.walk(path)
-                    .filter(Files::isRegularFile)
-                    .filter(p -> p.toString().endsWith(".pdf"))
-                    .forEach(p -> {
-                        try {
-                            long fileSize = Files.size(p);
-                            String fileName = p.getFileName().toString();
-                            String lastModified = fileName.replace("pvp_rank_report_", "").replace(".pdf", "");
-                            pdfFiles.add(new PdfFileInfo(
-                                    fileName, fileSize, lastModified));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    });
+            if (!Files.exists(path)) {
+                Files.createDirectories(path);
+                return pdfFiles;
+            }
+
+            try (var stream = Files.walk(path)) {
+                stream.filter(Files::isRegularFile)
+                        .filter(p -> p.toString().endsWith(".pdf"))
+                        .forEach(p -> {
+                            try {
+                                long fileSize = Files.size(p);
+                                String fileName = p.getFileName().toString();
+                                String lastModified = fileName.replace("pvp_rank_report_", "").replace(".pdf", "");
+                                pdfFiles.add(new PdfFileInfo(
+                                        fileName, fileSize, lastModified));
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        });
+            }
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Lỗi truy cập thư mục PDF: " + e.getMessage());
         }
         return pdfFiles;
     }
 
+    //    @Override
+//    public byte[] downloadReports(String fileName) {
+//        Path filePath = Paths.get(PDF_DIRECTORY, "reports", fileName);
+//
+//        if (!Files.exists(filePath)) {
+//            return null;
+//        }
+//
+//        try {
+//            return Files.readAllBytes(filePath);
+//        } catch (IOException e) {
+//            throw new RuntimeException("Không thể đọc file report: " + fileName, e);
+//        }
+//    }
     @Override
     public byte[] downloadReports(String fileName) {
-        Path filePath = Paths.get(PDF_DIRECTORY, "reports", fileName);
+        Path filePath = Path.of(getReportsPath()).resolve(fileName);
 
         if (!Files.exists(filePath)) {
             return null;
@@ -308,14 +400,13 @@ public class PaymentService implements IPaymentService {
         try {
             return Files.readAllBytes(filePath);
         } catch (IOException e) {
-            throw new RuntimeException("Không thể đọc file report: " + fileName, e);
+            throw new RuntimeException("Không thể đọc file report: " + fileName);
         }
     }
 
-
     public void generateMonthlyReportForMonth(int month) throws Exception {
 
-        int currentYear = Year.now().getValue();
+        int currentYear = Year.now().getValue() - 1;
 
         // Validate: chỉ cho phép tháng 7 -> 12
         if (month < 7 || month > 12) {
@@ -371,12 +462,12 @@ public class PaymentService implements IPaymentService {
         );
 
         String outputFilePath = String.format(
-                "%sreports/revenue-%02d-%d.pdf",
-                PDF_DIRECTORY,
+                "%srevenue-%02d-%d.pdf",
+                getReportsPath(),
                 month,
                 currentYear
         );
-
+//        System.out.println(outputFilePath);
         generatePdf(html, outputFilePath);
     }
 

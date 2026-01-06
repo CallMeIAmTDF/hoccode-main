@@ -7,7 +7,10 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-@Table(name = "testcases")
+@Table(name = "testcases", indexes = {
+        @Index(name = "idx_testcase_pid", columnList = "pid"),
+        @Index(name = "idx_testcase_hidden", columnList = "is_hidden")
+})
 @Getter
 @Setter
 @Builder

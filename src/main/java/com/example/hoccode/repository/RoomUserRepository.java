@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,4 +25,8 @@ public interface RoomUserRepository extends JpaRepository<RoomUser, Long> {
     Optional<RoomUser> findByRoomIdAndUserId(String roomId, String userId);
 
     Optional<RoomUser> findBySubmissionId(String submissionId);
+
+    void deleteByRoomIdIn(List<String> roomId);
+
+    List<RoomUser> findByRoomIdIn(List<String> roomIds);
 }

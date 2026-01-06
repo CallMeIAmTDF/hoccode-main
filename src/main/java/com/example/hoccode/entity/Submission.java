@@ -23,7 +23,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 //                }
 //        )
 //)
-@Table(name = "submissions")
+@Table(name = "submissions", indexes = {
+        @Index(name = "idx_submission_pid", columnList = "pid"),
+        @Index(name = "idx_submission_status", columnList = "status")
+})
 @Getter
 @Setter
 @Builder

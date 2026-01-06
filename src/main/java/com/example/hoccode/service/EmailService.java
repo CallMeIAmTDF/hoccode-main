@@ -13,5 +13,7 @@ public interface EmailService {
 
     void sendEmailStreaks(NotificationEvent message);
 
+    void sendEmailPremium(NotificationEvent message);
+
     void sendEmailPlagiarism(NotificationEvent message);
 }

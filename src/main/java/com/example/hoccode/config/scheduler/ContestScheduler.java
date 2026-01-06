@@ -1,6 +1,7 @@
 package com.example.hoccode.config.scheduler;
 
 
+import com.example.hoccode.config.template.RabbitKafkaTemplate;
 import com.example.hoccode.dto.SocketMessage;
 import com.example.hoccode.entity.Contest;
 import com.example.hoccode.entity.ContestParticipant;
@@ -13,7 +14,6 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -34,7 +34,7 @@ public class ContestScheduler {
     StringStringIntegerRedis stringStringIntegerRedis;
     RedisTemplate<String, Boolean> redisTemplate;
     ContestParticipantRepository participantRepository;
-    KafkaTemplate<String, Object> kafkaTemplate;
+    RabbitKafkaTemplate kafkaTemplate;
 
     @Scheduled(fixedRate = 60000)
     public void checkUpcomingContests() {

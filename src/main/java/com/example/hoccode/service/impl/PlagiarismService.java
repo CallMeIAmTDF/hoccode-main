@@ -1,6 +1,7 @@
 package com.example.hoccode.service.impl;
 
 import com.example.hoccode.advice.exception.BadRequestException;
+import com.example.hoccode.config.template.RabbitKafkaTemplate;
 import com.example.hoccode.dto.SocketMessage;
 import com.example.hoccode.dto.projection.SubmissionWithProblemTitleProjection;
 import com.example.hoccode.dto.response.PlagiarismDetailResponse;
@@ -29,7 +30,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -52,7 +52,7 @@ public class PlagiarismService implements IPlagiarismService {
     SecurityUtil securityUtil;
     SubmissionRepository submissionRepository;
     SimpMessagingTemplate messagingTemplate;
-    KafkaTemplate<String, Object> kafkaTemplate;
+    RabbitKafkaTemplate kafkaTemplate;
     IProblemService problemService;
     IContestService contestService;
 

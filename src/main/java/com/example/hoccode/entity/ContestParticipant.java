@@ -8,7 +8,10 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
-@Table(name = "contest_participant")
+@Table(name = "contest_participant", indexes = {
+        @Index(name = "idx_participant_contest", columnList = "contest_id"),
+        @Index(name = "idx_participant_user", columnList = "user_id")
+})
 @Getter
 @Setter
 @Builder

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Chúc mừng! Tài khoản của bạn đã lên Premium - HocCode</title>
+</head>
+<body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#f4f7ff; color:#333;">
+<div style="max-width:600px; margin:30px auto; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.08);">
+
+    <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 25px; text-align:center; color:#fff;">
+        <h1 style="margin:0; font-size:26px;">Thanh toán thành công!</h1>
+    </div>
+
+    <div style="padding: 30px; text-align:center;">
+        <h2 style="font-size:22px; margin:0 0 14px;">
+            Chúc mừng <span th:text="${name}">Người dùng</span>!
+        </h2>
+
+        <p style="font-size:16px; line-height:1.7; margin:0 0 20px;">
+            Tài khoản của bạn đã được nâng cấp lên gói <b>Premium</b> thành công.
+            Giờ đây bạn đã có quyền truy cập không giới hạn vào tất cả các khóa học và tính năng đặc quyền của HocCode.
+        </p>
+
+
+        <p style="font-size:15px; margin:0 0 20px; color: #4b5563;">
+            Hãy bắt đầu hành trình chinh phục code ngay hôm nay!
+        </p>
+
+<!--        <div style="text-align:center; margin: 0 28px 0 0;">-->
+<!--            <a th:href="${exploreUrl}" target="_blank" rel="noopener"-->
+<!--               style="display:inline-block; background:#10b981; color:#fff; padding:14px 32px; border-radius:10px; text-decoration:none; font-weight:600; font-size:16px;">-->
+<!--                Khám phá đặc quyền Premium-->
+<!--            </a>-->
+<!--        </div>-->
+    </div>
+
+    <div style="background:#f9fafb; padding:16px; text-align:center; font-size:12px; color:#6b7280;">
+        Cảm ơn bạn đã tin tưởng và đồng hành cùng chúng tôi.<br/>
+        © 2025 HocCode
+    </div>
+</div>
+</body>
+</html>

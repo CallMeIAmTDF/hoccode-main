@@ -1,5 +1,6 @@
 package com.example.hoccode.config.scheduler;
 
+import com.example.hoccode.config.template.RabbitKafkaTemplate;
 import com.example.hoccode.entity.Streak;
 import com.example.hoccode.event.NotificationEvent;
 import com.example.hoccode.repository.StreakRepository;
@@ -8,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +31,7 @@ public class StreakScheduler {
     @NonFinal
     String urlNoticeStreak;
 
-    KafkaTemplate<String, Object> kafkaTemplate;
+    RabbitKafkaTemplate kafkaTemplate;
 
     @Scheduled(cron = "0 0 20 * * ?")
     public void StreakSchedulerJob() {

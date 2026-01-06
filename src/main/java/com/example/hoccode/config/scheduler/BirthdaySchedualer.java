@@ -1,12 +1,12 @@
 package com.example.hoccode.config.scheduler;
 
+import com.example.hoccode.config.template.RabbitKafkaTemplate;
 import com.example.hoccode.entity.User;
 import com.example.hoccode.event.NotificationEvent;
 import com.example.hoccode.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +19,7 @@ import java.util.Map;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class BirthdaySchedualer {
     UserRepository userRepository;
-    KafkaTemplate<String, Object> kafkaTemplate;
+    RabbitKafkaTemplate kafkaTemplate;
 
     @Scheduled(cron = "0 0 8 * * ?")
     public void BirthdaySchedulerJob() {

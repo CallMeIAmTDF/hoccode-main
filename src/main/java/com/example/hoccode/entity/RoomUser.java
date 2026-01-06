@@ -6,7 +6,9 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "room_user", uniqueConstraints = @UniqueConstraint(columnNames = {"room_id", "user_id"}))
+@Table(name = "room_user", indexes = {
+        @Index(name = "idx_room_user_room_id", columnList = "room_id")
+}, uniqueConstraints = @UniqueConstraint(columnNames = {"room_id", "user_id"}))
 @Getter
 @Setter
 @NoArgsConstructor

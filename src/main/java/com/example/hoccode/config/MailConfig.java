@@ -35,12 +35,21 @@ public class MailConfig {
         mailSender.setPassword(password);
         mailSender.setDefaultEncoding("UTF-8");
 
+        System.out.println("=========password: " + password);
+
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.starttls.required", "true");
+
         props.put("mail.smtp.ssl.enable", isSSL);
-        props.put("mail.smtp.from", email);
+        props.put("mail.smtp.from", "noreply@hoccode.cloud");
+
+        props.put("mail.smtp.connectiontimeout", "5000");
+        props.put("mail.smtp.timeout", "5000");
+        props.put("mail.smtp.writetimeout", "5000");
+
         props.put("mail.debug", "true");
 
         return mailSender;

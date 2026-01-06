@@ -1,5 +1,6 @@
 package com.example.hoccode.controller;
 
+import com.example.hoccode.config.template.RabbitKafkaTemplate;
 import com.example.hoccode.dto.ApiResponse;
 import com.example.hoccode.dto.SocketMessage;
 import com.example.hoccode.dto.analysis.GPTProfileAnalysisResponse;
@@ -11,7 +12,6 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.*;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +23,7 @@ import java.util.Map;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class TestController {
-    KafkaTemplate<String, Object> kafkaTemplate;
+    RabbitKafkaTemplate kafkaTemplate;
     SubmissionRepository submissionRepository;
     IContestService contestService;
     IGPTService gptService;

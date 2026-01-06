@@ -4,16 +4,12 @@ server:
 spring:
   application:
     name: template
-#  task:
-#    scheduling:
-#      zo
-#      time-zone: =Asia/Ho_Chi_Minh
   servlet:
     multipart:
       max-file-size: 20MB
       max-request-size: 25MB
   datasource:
-    url: jdbc:mysql://localhost:3306/hoccode
+    url: "${DATABASE_URL:jdbc:mysql://hoccode-db:3306/hoccode?createDatabaseIfNotExist=true&useSSL=false}"
     username: root
     password: root
   jpa:
@@ -23,38 +19,32 @@ spring:
   sql:
     init:
       mode: always
-  kafka:
-    bootstrap-servers: localhost:9094
-    consumer:
-      group-id: notification-group
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
   rabbitmq:
-    host: localhost
+    host: ${RABBITMQ_HOST:rabbitmq}
     port: 5672
     username: guest
     password: guest
+    listener:
+      simple:
+        concurrency: 2
+        max-concurrency: 5
+        prefetch: 5
 redis:
-  host: localhost
+  host: ${REDIS_HOST:redis-stack-local}
   port: 6379
+
 
 auth:
   jwt:
-    accessSignerKey: adE97Xs2F4he7WYk8pQzUBxfRm3TAjo9
-    refreshSignerKey: 4tFg9sKcVhPuA3xMnEjqRZ1YbvLU0dNW
+    accessSignerKey: ${JWT_ACCESS_KEY:dev-access-key}
+    refreshSignerKey: ${JWT_REFRESH_KEY:dev-refresh-key}
     valid-duration: 86400
     refreshable-duration: 2592000
   outbound:
     identity:
       client-id: "391255146342-mdm2kqf4afvr3je7850ku08qp2d6fcon.apps.googleusercontent.com"
-      client-secret: "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"
-      redirect-uri: "http://localhost:3000/auth/authenticate"
+      client-secret: ${OUTBOUND_SECRET:fakedata}
+      redirect-uri: "${OUTBOUND_REDIRECT_URI:http://localhost:3000/auth/authenticate}"
   verify:
     register-code-duration: 86400000 # 24 * 60 * 60 * 1000 = 86400000
     forgot-password-code-duration: 86400000
@@ -75,11 +65,19 @@ plagiarism-api:
   port: ${PLAGIARISM_API_PORT:8000}
 
 mailServer:
-  host: smtp.gmail.com
-  port: 587
-  email: "hello.iamtdf@gmail.com"
-  password: "wzrqmhdbvzzfmfre"
-  protocol: smtp
+  # host: smtp.gmail.com
+#  host: 74.125.24.108
+#  port: 587
+#  email: "hello.iamtdf@gmail.com"
+#  password: ${MAIL_PASSWORD:fakedata}
+#  protocol: smtp
+#  isSSL: false
+
+  host: smtp.sendgrid.net
+#  port: 587
+  port: 2525
+  email: apikey
+  password: ${MAIL_PASSWORD:fakedata}
   isSSL: false
 
 api:
@@ -107,8 +105,10 @@ app:
       - method: GET
         path: /test
         limit-key: test
+  pdf:
+    directory: "./storage/pdf_report/"
 
 pay-os:
-  client-id: bd2473ed-e41e-433e-8866-d92ab3823a34
-  api-key: 4f8fd3bf-94e4-4bc7-b617-cfab6192faa0
-  checksum-key: 915a2831786201ff858ec72c2fd31539c51468e7df24b1939d74e262cc1feef6
+  client-id: ${PAYOS_CLIENT_ID:fakedata}
+  api-key: ${PAYOS_KEY:fakedata}
+  checksum-key: ${PAYOS_CHECK_SUM_KEY:fakedata}

@@ -13,7 +13,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "contests")
+@Table(name = "contests", indexes = {
+        @Index(name = "idx_contest_start_end", columnList = "start_time, end_time"),
+        @Index(name = "idx_contest_deleted", columnList = "deleted")
+})
 @Getter
 @Setter
 @Builder

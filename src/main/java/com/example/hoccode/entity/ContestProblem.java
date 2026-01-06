@@ -12,7 +12,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.util.List;
 
 @Entity
-@Table(name = "contest_problems")
+@Table(name = "contest_problems", indexes = {
+        @Index(name = "idx_contest_problem_contest", columnList = "contest_id"),
+        @Index(name = "idx_contest_problem_problem", columnList = "problem_id")
+})
 @Getter
 @Setter
 @Builder
