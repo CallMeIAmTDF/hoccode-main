@@ -25,7 +25,7 @@ public class RateLimiterService implements IRateLimiterService {
     private static final long WINDOW_SECONDS = 60;
 
     private static final Map<String, long[]> CUSTOM_RATE_LIMITS = Map.of(
-            "submission-post-limit", new long[]{1, 20}, // POST /submission: 1 request / 20 giây
+            "submission-post-limit", new long[]{3, 20}, // POST /submission: 1 request / 20 giây
             "chat-post-limit", new long[]{5, 60}
     );
 

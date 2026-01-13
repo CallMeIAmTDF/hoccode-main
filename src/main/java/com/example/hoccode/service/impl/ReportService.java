@@ -69,7 +69,7 @@ public class ReportService implements IReportService {
                         .title("Thông báo hệ thống")
                         .message("Báo cáo của bạn đã được giải quyết")
                         .receiver(report.getCreatedBy())
-                        .redirectUrl("/profile/report/" + report.getId())
+                        .redirectUrl("/profile/report/")
                         .type(NotificationTypeEnum.SYSTEM)
                         .status(NotificationStatusEnum.SEND)
                 .build());

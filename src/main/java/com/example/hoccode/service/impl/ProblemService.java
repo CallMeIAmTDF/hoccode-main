@@ -47,6 +47,7 @@ public class ProblemService implements IProblemService {
     SecurityUtil securityUtil;
     IStringStringIntegerRedis redis;
     SubmissionRepository submissionRepository;
+    StreakRepository streakRepository;
 
     @Override
     @Transactional
@@ -227,7 +228,7 @@ public class ProblemService implements IProblemService {
             problem = problemRepository.getDailyProblem();
             redis.setDailyChallenge(problem.getId());
         }
-        return getAProblem(problem);
+        return getDailyProblemDetail(problem);
     }
 
     @Override
@@ -294,13 +295,23 @@ public class ProblemService implements IProblemService {
     public ProblemResponse getAProblem(Problem problem){
         Set<Integer> finalAcceptedIds = getListAcceptedId();
         List<Integer> problemIds = List.of(problem.getId());
-        Map<String, Map<Integer, Long>> stats = getProblemStats(problemIds);
-        Map<Integer, Long> passCountMap = stats.get("pass");
-        Map<Integer, Long> failCountMap = stats.get("fail");
+//        Map<String, Map<Integer, Long>> stats = getProblemStats(problemIds);
+//        Map<Integer, Long> passCountMap = stats.get("pass");
+//        Map<Integer, Long> failCountMap = stats.get("fail");
         ProblemResponse response = problemMapper.toProblemResponse(problem, true, finalAcceptedIds);
-        response.setPassCount(passCountMap.getOrDefault(problem.getId(), 0L));
-        response.setFailCount(failCountMap.getOrDefault(problem.getId(), 0L));
+//        response.setPassCount(passCountMap.getOrDefault(problem.getId(), 0L));
+//        response.setFailCount(failCountMap.getOrDefault(problem.getId(), 0L));
         return response;
+    }
+
+    private ProblemResponse getDailyProblemDetail(Problem problem){
+        Set<Integer> finalAcceptedIds = new HashSet<>();
+
+        if(streakRepository.isStreakUpdatedToday(securityUtil.getCurrentUserLogin().get())){
+            finalAcceptedIds.add(problem.getId());
+        }
+        System.out.println(finalAcceptedIds);
+        return problemMapper.toProblemResponse(problem, true, finalAcceptedIds);
     }
 
     @Override

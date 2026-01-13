@@ -294,7 +294,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserPointResponse> getLeaderBoard() {
-        return userRepository.findTop15ByActiveTrueAndRoleOrderByPointDesc("USER").stream().map(userMapper::toUserPointResponse).toList();
+        return userRepository.findTop9ByActiveTrueAndRoleOrderByPointDesc("USER").stream().map(userMapper::toUserPointResponse).toList();
     }
 
     @Override

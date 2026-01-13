@@ -22,4 +22,16 @@ public interface StreakRepository extends JpaRepository<Streak, Integer> {
             "WHERE s.updatedAt IS NULL " +
             "   OR s.updatedAt < :todayStart AND s.currentStreak > 0")
     List<Streak> findNotUpdatedToday(@Param("todayStart") LocalDateTime todayStart);
+
+    @Query("""
+        SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END
+        FROM Streak s
+        WHERE s.user.email = :userId
+          AND s.updatedAt IS NOT NULL
+          AND s.updatedAt >= CURRENT_DATE
+          AND s.currentStreak > 0
+    """)
+    boolean isStreakUpdatedToday(
+            @Param("userId") String userId
+    );
 }

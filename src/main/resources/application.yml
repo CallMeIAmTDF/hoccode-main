@@ -9,7 +9,7 @@ spring:
       max-file-size: 20MB
       max-request-size: 25MB
   datasource:
-    url: "${DATABASE_URL:jdbc:mysql://hoccode-db:3306/hoccode?createDatabaseIfNotExist=true&useSSL=false}"
+    url: "${DATABASE_URL:jdbc:mysql://localhost:3306/hoccode?createDatabaseIfNotExist=true&useSSL=false}"
     username: root
     password: root
   jpa:
@@ -20,7 +20,7 @@ spring:
     init:
       mode: always
   rabbitmq:
-    host: ${RABBITMQ_HOST:rabbitmq}
+    host: ${RABBITMQ_HOST:localhost}
     port: 5672
     username: guest
     password: guest
@@ -30,7 +30,7 @@ spring:
         max-concurrency: 5
         prefetch: 5
 redis:
-  host: ${REDIS_HOST:redis-stack-local}
+  host: ${REDIS_HOST:localhost}
   port: 6379
 
 
@@ -65,16 +65,7 @@ plagiarism-api:
   port: ${PLAGIARISM_API_PORT:8000}
 
 mailServer:
-  # host: smtp.gmail.com
-#  host: 74.125.24.108
-#  port: 587
-#  email: "hello.iamtdf@gmail.com"
-#  password: ${MAIL_PASSWORD:fakedata}
-#  protocol: smtp
-#  isSSL: false
-
   host: smtp.sendgrid.net
-#  port: 587
   port: 2525
   email: apikey
   password: ${MAIL_PASSWORD:fakedata}
@@ -99,9 +90,6 @@ app:
       - method: POST
         path: /chat
         limit-key: chat-post-limit
-      - method: GET
-        path: /api/v1/expensive-query
-        limit-key: expensive-query-limit
       - method: GET
         path: /test
         limit-key: test

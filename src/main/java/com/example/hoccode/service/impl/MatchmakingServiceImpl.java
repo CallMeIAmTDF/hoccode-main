@@ -51,7 +51,7 @@ public class MatchmakingServiceImpl implements MatchmakingService {
     IProblemService problemService;
     NotificationRepository notificationRepository;
 
-    private int MAX_PLAYER = 2;
+    private int MAX_PLAYER = 8;
 
     @Override
     @Transactional

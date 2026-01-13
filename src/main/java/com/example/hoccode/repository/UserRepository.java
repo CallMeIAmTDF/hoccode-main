@@ -25,7 +25,7 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
 
     List<User> findByIdIn(List<String> ids);
 
-    List<User> findTop15ByActiveTrueAndRoleOrderByPointDesc(String role);
+    List<User> findTop9ByActiveTrueAndRoleOrderByPointDesc(String role);
 
 
     @Query(value = """
