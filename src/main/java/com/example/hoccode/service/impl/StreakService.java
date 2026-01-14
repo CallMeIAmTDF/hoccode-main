@@ -35,7 +35,7 @@ public class StreakService implements IStreakService {
             LocalDate today = LocalDate.now();
             LocalDate lastDate = streak.getUpdatedAt() != null ? streak.getUpdatedAt().toLocalDate() : streak.getCreatedAt().toLocalDate();
             // đã update
-            if(lastDate.equals(today)){
+            if(lastDate.equals(today) && streak.getCurrentStreak() > 0){
                 return;
             }
             // ngày hôm qua

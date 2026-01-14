@@ -64,7 +64,7 @@ public class AdminService implements IAdminService {
                 DashboardStatsItem.builder()
                         .title("problems")
                         .change(String.format("Tăng %d thử thách mới tháng này", change))
-                        .value(totalUser.toString())
+                        .value(totalProblem.toString())
                         .build()
         );
 
